@@ -15,6 +15,7 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// ============ REQUEST: adiciona Authorization ============
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token && config.headers) {
@@ -22,3 +23,23 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// ============ RESPONSE: trata 401 (token expirado/inválido) ============
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const url: string = error?.config?.url ?? '';
+
+    // Não redireciona se o próprio login falhou (401 esperado)
+    const isLoginRequest = url.includes('/api/auth/login');
+    const jaEstouNoLogin = window.location.pathname.startsWith('/login');
+
+    if (status === 401 && !isLoginRequest && !jaEstouNoLogin) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('usuario');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);

@@ -8,6 +8,8 @@ import {
 } from 'react';
 import AnimalForm from '../components/AnimalForm';
 import AnimalList from '../components/AnimalList';
+import LogoutButton from '../components/LogoutButton';
+import { useAuth } from '../contexts/AuthContext';
 import type { Animal } from '../types';
 
 const STORAGE_KEY = 'agrogestor:animais';
@@ -89,6 +91,16 @@ const formatarData = () =>
     year: 'numeric',
   });
 
+const iniciais = (nome?: string) => {
+  if (!nome) return '?';
+  return nome
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? '')
+    .join('');
+};
+
 // ============================================================
 // Componente principal
 // ============================================================
@@ -96,12 +108,14 @@ export default function Dashboard() {
   const { animais, salvar, excluir, importar } = useAnimais();
   const { tema, alternar } = useTema();
   const { toasts, push } = useToasts();
+  const { usuario } = useAuth();
 
   const [aba, setAba] = useState<Aba>('visao');
   const [animalEditando, setAnimalEditando] = useState<Animal | null>(null);
   const [busca, setBusca] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState<'Todas' | Animal['categoria']>('Todas');
   const [paletaAberta, setPaletaAberta] = useState(false);
+  const [menuUsuarioAberto, setMenuUsuarioAberto] = useState(false);
 
   const buscaDeferred = useDeferredValue(busca);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -113,11 +127,22 @@ export default function Dashboard() {
         e.preventDefault();
         setPaletaAberta((v) => !v);
       }
-      if (e.key === 'Escape') setPaletaAberta(false);
+      if (e.key === 'Escape') {
+        setPaletaAberta(false);
+        setMenuUsuarioAberto(false);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // Fecha menu do usuário ao clicar fora
+  useEffect(() => {
+    if (!menuUsuarioAberto) return;
+    const fechar = () => setMenuUsuarioAberto(false);
+    window.addEventListener('click', fechar);
+    return () => window.removeEventListener('click', fechar);
+  }, [menuUsuarioAberto]);
 
   // Ações
   const handleSalvar = useCallback(
@@ -199,7 +224,6 @@ export default function Dashboard() {
       return acc;
     }, {});
 
-    // Top 5 para gráfico
     const top5 = [...animais].sort((a, b) => b.producaoDiaria - a.producaoDiaria).slice(0, 5);
     const maxProd = top5[0]?.producaoDiaria ?? 1;
 
@@ -302,7 +326,139 @@ export default function Dashboard() {
               onChange={importarJSON}
               style={{ display: 'none' }}
             />
-            <div style={{ ...base.avatar, background: t.accent }}>A</div>
+
+            {/* ============ MENU DO USUÁRIO + LOGOUT ============ */}
+            <div
+              style={{ position: 'relative' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setMenuUsuarioAberto((v) => !v)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  background: 'transparent',
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 999,
+                  padding: '4px 12px 4px 4px',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  color: t.text,
+                }}
+                aria-haspopup="menu"
+                aria-expanded={menuUsuarioAberto}
+              >
+                <div
+                  style={{
+                    ...base.avatar,
+                    background: t.accent,
+                    width: 30,
+                    height: 30,
+                    fontSize: 12,
+                  }}
+                >
+                  {iniciais(usuario?.nome)}
+                </div>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    maxWidth: 140,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {usuario?.nome ?? 'Usuário'}
+                </span>
+                <span style={{ fontSize: 10, color: t.muted }}>▾</span>
+              </button>
+
+              {menuUsuarioAberto && (
+                <div
+                  role="menu"
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    minWidth: 240,
+                    background: t.surface,
+                    border: `1px solid ${t.border}`,
+                    borderRadius: 10,
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+                    padding: 8,
+                    zIndex: 50,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: '10px 12px',
+                      borderBottom: `1px solid ${t.border}`,
+                      marginBottom: 6,
+                    }}
+                  >
+                    <div style={{ fontWeight: 600, fontSize: 13, color: t.text }}>
+                      {usuario?.nome ?? 'Usuário'}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: t.muted,
+                        marginTop: 2,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {usuario?.email ?? ''}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMenuUsuarioAberto(false);
+                      setAba('config');
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      width: '100%',
+                      padding: '9px 12px',
+                      background: 'transparent',
+                      border: 'none',
+                      borderRadius: 6,
+                      cursor: 'pointer',
+                      fontSize: 13,
+                      textAlign: 'left',
+                      color: t.text,
+                      fontFamily: 'inherit',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.background = t.accentSoft)}
+                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                  >
+                    ⚙️ Configurações
+                  </button>
+
+                  <div style={{ padding: '6px 4px 2px' }}>
+                    <LogoutButton
+                      estilo={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10,
+                        fontSize: 13,
+                        borderRadius: 6,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -323,7 +479,6 @@ export default function Dashboard() {
                 />
               </section>
 
-              {/* Gráfico de barras TOP 5 */}
               <section style={{ ...base.panel, background: t.surface, borderColor: t.border }}>
                 <h3 style={{ margin: '0 0 16px', fontSize: 14, color: t.text }}>
                   Top 5 — Produção diária (L)
@@ -365,7 +520,6 @@ export default function Dashboard() {
                 )}
               </section>
 
-              {/* Distribuição por categoria */}
               <section style={{ ...base.panel, background: t.surface, borderColor: t.border }}>
                 <h3 style={{ margin: '0 0 12px', fontSize: 14, color: t.text }}>
                   Distribuição por categoria
@@ -569,6 +723,17 @@ export default function Dashboard() {
                     Importar
                   </button>
                 </div>
+              </div>
+
+              {/* ============ CONTA / LOGOUT ============ */}
+              <div style={base.configRow}>
+                <div>
+                  <div style={{ fontWeight: 600, color: t.text }}>Conta</div>
+                  <div style={{ fontSize: 12, color: t.muted }}>
+                    {usuario?.email ?? 'Sessão ativa'}
+                  </div>
+                </div>
+                <LogoutButton />
               </div>
 
               <div style={base.configRow}>

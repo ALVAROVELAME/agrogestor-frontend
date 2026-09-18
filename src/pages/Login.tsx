@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { api } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LoginResposta {
   sucesso: boolean;
@@ -20,7 +21,10 @@ export default function Login() {
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
 
   // Limpa erro quando o usuário digita
   useEffect(() => {
@@ -38,15 +42,16 @@ export default function Login() {
         senha,
       });
 
-      // Guarda o token JWT
-      localStorage.setItem('token', data.token);
-
-      // Guarda o usuário para exibir no dashboard
-      if (data.usuario) {
-        localStorage.setItem('usuario', JSON.stringify(data.usuario));
+      if (!data.token || !data.usuario) {
+        throw new Error('Resposta inválida do servidor.');
       }
 
-      navigate('/dashboard');
+      // ✅ Atualiza o AuthContext (que já persiste no localStorage)
+      login(data.usuario, data.token);
+
+      // Redireciona de volta pra onde o usuário queria ir (ou /dashboard)
+      const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
+      navigate(from || '/dashboard', { replace: true });
     } catch (err: unknown) {
       const apiErr = err as { response?: { data?: { mensagem?: string } } };
       setErro(
