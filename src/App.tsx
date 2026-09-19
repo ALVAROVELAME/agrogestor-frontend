@@ -3,6 +3,8 @@ import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
+import Status from './pages/Status';
+import ConfirmarEmail from './pages/ConfirmarEmail';
 import { AuthProvider } from './contexts/AuthContext';
 import RotaProtegida from './components/RotaProtegida';
 import RotaPublica from './components/RotaPublica';
@@ -12,6 +14,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* ============ ROTAS PÚBLICAS ============ */}
           <Route
             path="/"
             element={
@@ -36,6 +39,12 @@ export default function App() {
               </RotaPublica>
             }
           />
+
+          {/* ============ PÁGINAS DE STATUS (sempre acessíveis) ============ */}
+          <Route path="/status" element={<Status />} />
+          <Route path="/confirmar" element={<ConfirmarEmail />} />
+
+          {/* ============ ROTAS PROTEGIDAS ============ */}
           <Route
             path="/dashboard"
             element={
@@ -44,6 +53,8 @@ export default function App() {
               </RotaProtegida>
             }
           />
+
+          {/* ============ FALLBACK ============ */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

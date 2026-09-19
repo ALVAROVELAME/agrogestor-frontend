@@ -12,6 +12,9 @@ const TOKEN_KEY = 'token';
 const USER_KEY = 'usuario';
 
 export const authService = {
+  // ============================================================
+  // AUTENTICAÇÃO
+  // ============================================================
   async login(dados: LoginDTO): Promise<LoginRespostaDTO> {
     const { data } = await api.post<LoginRespostaDTO>('/api/auth/login', dados);
     if (data.token) {
@@ -23,16 +26,38 @@ export const authService = {
     return data;
   },
 
-  async cadastrar(dados: UsuarioCadastroDTO): Promise<MensagemRespostaDTO> {
-    const { data } = await api.post<MensagemRespostaDTO>('/api/usuarios', dados);
-    return data;
-  },
-
   async me(): Promise<Usuario> {
     const { data } = await api.get<Usuario>('/api/auth/me');
     return data;
   },
 
+  logout(): void {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  },
+
+  // ============================================================
+  // CADASTRO / CONFIRMAÇÃO DE E-MAIL
+  // ============================================================
+  async cadastrar(dados: UsuarioCadastroDTO): Promise<MensagemRespostaDTO> {
+    const { data } = await api.post<MensagemRespostaDTO>('/api/usuarios', dados);
+    return data;
+  },
+
+  /**
+   * Confirma o e-mail do usuário a partir do token recebido por email.
+   * O backend retorna 200 se confirmou, ou 400 se o token expirou/é inválido.
+   */
+  async confirmarEmail(token: string): Promise<MensagemRespostaDTO> {
+    const { data } = await api.get<MensagemRespostaDTO>('/api/auth/confirmar', {
+      params: { token },
+    });
+    return data;
+  },
+
+  // ============================================================
+  // EXCLUSÃO DE CONTA
+  // ============================================================
   /**
    * Exclui a conta do usuário logado.
    * Requer a senha atual para confirmação.
@@ -48,11 +73,9 @@ export const authService = {
     return data;
   },
 
-  logout(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-  },
-
+  // ============================================================
+  // HELPERS DE STORAGE
+  // ============================================================
   getToken(): string | null {
     return localStorage.getItem(TOKEN_KEY);
   },
