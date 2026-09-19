@@ -432,4 +432,4 @@ Este projeto está sob a licença **MIT**. Veja o arquivo [LICENSE](./LICENSE) p
 
 [⬆ Voltar ao topo](#-agrogestor)
 
-</div>
+</div> 
