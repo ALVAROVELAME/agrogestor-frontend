@@ -14,18 +14,27 @@ const CATEGORIAS: Animal['categoria'][] = [
   'Vaca Seca',
 ];
 
-const FORM_VAZIO: Omit<Animal, 'id'> = {
+const MAX_BRINCO = 20;
+const MAX_NOME = 40;
+const MAX_PRODUCAO = 200;
+
+// ✅ producaoDiaria como `number | ''` para permitir campo vazio
+type FormAnimal = {
+  brinco: string;
+  nome: string;
+  categoria: Animal['categoria'];
+  producaoDiaria: number | '';
+};
+
+const FORM_VAZIO: FormAnimal = {
   brinco: '',
   nome: '',
   categoria: 'Vaca em Lactação',
-  producaoDiaria: 0,
+  producaoDiaria: '',
 };
 
-const MAX_BRINCO = 20;
-const MAX_NOME = 40;
-
 export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Props) {
-  const [form, setForm] = useState<Omit<Animal, 'id'>>(FORM_VAZIO);
+  const [form, setForm] = useState<FormAnimal>(FORM_VAZIO);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submetido, setSubmetido] = useState(false);
 
@@ -34,8 +43,12 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
   // Sincroniza com o animal em edição e foca no primeiro campo
   useEffect(() => {
     if (animalEditando) {
-      const { id, ...resto } = animalEditando;
-      setForm(resto);
+      setForm({
+        brinco: animalEditando.brinco,
+        nome: animalEditando.nome,
+        categoria: animalEditando.categoria,
+        producaoDiaria: animalEditando.producaoDiaria,
+      });
       setTouched({});
       setSubmetido(false);
       brincoRef.current?.focus();
@@ -46,7 +59,8 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
 
   // ---------- Validação ----------
   const erros = useMemo(() => {
-    const e: Partial<Record<keyof Omit<Animal, 'id'>, string>> = {};
+    const e: Partial<Record<keyof FormAnimal, string>> = {};
+
     if (!form.brinco.trim()) e.brinco = 'Brinco é obrigatório';
     else if (form.brinco.length > MAX_BRINCO)
       e.brinco = `Máximo de ${MAX_BRINCO} caracteres`;
@@ -55,20 +69,23 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
     else if (form.nome.length > MAX_NOME)
       e.nome = `Máximo de ${MAX_NOME} caracteres`;
 
-    if (form.producaoDiaria < 0) e.producaoDiaria = 'Não pode ser negativo';
-    if (form.producaoDiaria > 200) e.producaoDiaria = 'Valor irreal (> 200 L)';
+    if (form.producaoDiaria !== '') {
+      if (form.producaoDiaria < 0) e.producaoDiaria = 'Não pode ser negativo';
+      else if (form.producaoDiaria > MAX_PRODUCAO)
+        e.producaoDiaria = `Valor irreal (> ${MAX_PRODUCAO} L)`;
+    }
 
     return e;
   }, [form]);
 
   const formInvalido = Object.keys(erros).length > 0;
 
-  const mostrarErro = (campo: keyof typeof form) =>
+  const mostrarErro = (campo: keyof FormAnimal) =>
     (touched[campo] || submetido) && erros[campo];
 
   // ---------- Handlers ----------
   const atualizar = useCallback(
-    <K extends keyof Omit<Animal, 'id'>>(campo: K, valor: Omit<Animal, 'id'>[K]) => {
+    <K extends keyof FormAnimal>(campo: K, valor: FormAnimal[K]) => {
       setForm((prev) => ({ ...prev, [campo]: valor }));
     },
     []
@@ -79,7 +96,16 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
     setSubmetido(true);
     if (formInvalido) return;
 
-    onSalvar({ ...form, id: animalEditando?.id } as Animal);
+    // ✅ Converte '' para 0 apenas na hora de salvar
+    const animal: Animal = {
+      brinco: form.brinco.trim(),
+      nome: form.nome.trim(),
+      categoria: form.categoria,
+      producaoDiaria: form.producaoDiaria === '' ? 0 : form.producaoDiaria,
+      ...(animalEditando?.id !== undefined && { id: animalEditando.id }),
+    };
+
+    onSalvar(animal);
     setForm(FORM_VAZIO);
     setTouched({});
     setSubmetido(false);
@@ -104,24 +130,19 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
   }, [animalEditando]);
 
   return (
-    <form onSubmit={handleSubmit} style={styles.form} noValidate>
-      <header style={styles.header}>
-        <h3 style={styles.title}>
-          {animalEditando ? '✏️ Editar Animal' : '➕ Novo Animal'}
-        </h3>
-        {animalEditando && (
-          <span style={styles.badge}>
-            Editando: <strong>{animalEditando.nome}</strong> ({animalEditando.brinco})
-          </span>
-        )}
-      </header>
+    <form onSubmit={handleSubmit} className="af-form" noValidate>
+      {animalEditando && (
+        <div className="af-badge">
+          Editando: <strong>{animalEditando.nome}</strong> ({animalEditando.brinco})
+        </div>
+      )}
 
-      <div style={styles.grid}>
+      <div className="af-grid">
         {/* Brinco */}
-        <div style={styles.field}>
-          <label htmlFor="brinco" style={styles.label}>
+        <div className="af-field">
+          <label htmlFor="brinco" className="af-label">
             Brinco *
-            <span style={styles.counter}>
+            <span className="af-counter">
               {form.brinco.length}/{MAX_BRINCO}
             </span>
           </label>
@@ -134,23 +155,20 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
             onChange={(e) => atualizar('brinco', e.target.value)}
             onBlur={() => setTouched((t) => ({ ...t, brinco: true }))}
             aria-invalid={!!mostrarErro('brinco')}
-            style={{
-              ...styles.input,
-              ...(mostrarErro('brinco') ? styles.inputError : null),
-            }}
+            className={`af-input${mostrarErro('brinco') ? ' is-error' : ''}`}
           />
           {mostrarErro('brinco') && (
-            <span role="alert" style={styles.errorMsg}>
+            <span role="alert" className="af-error">
               {erros.brinco}
             </span>
           )}
         </div>
 
         {/* Nome */}
-        <div style={styles.field}>
-          <label htmlFor="nome" style={styles.label}>
+        <div className="af-field">
+          <label htmlFor="nome" className="af-label">
             Nome *
-            <span style={styles.counter}>
+            <span className="af-counter">
               {form.nome.length}/{MAX_NOME}
             </span>
           </label>
@@ -162,21 +180,18 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
             onChange={(e) => atualizar('nome', e.target.value)}
             onBlur={() => setTouched((t) => ({ ...t, nome: true }))}
             aria-invalid={!!mostrarErro('nome')}
-            style={{
-              ...styles.input,
-              ...(mostrarErro('nome') ? styles.inputError : null),
-            }}
+            className={`af-input${mostrarErro('nome') ? ' is-error' : ''}`}
           />
           {mostrarErro('nome') && (
-            <span role="alert" style={styles.errorMsg}>
+            <span role="alert" className="af-error">
               {erros.nome}
             </span>
           )}
         </div>
 
         {/* Categoria */}
-        <div style={styles.field}>
-          <label htmlFor="categoria" style={styles.label}>
+        <div className="af-field">
+          <label htmlFor="categoria" className="af-label">
             Categoria
           </label>
           <select
@@ -185,7 +200,7 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
             onChange={(e) =>
               atualizar('categoria', e.target.value as Animal['categoria'])
             }
-            style={styles.select}
+            className="af-select"
           >
             {CATEGORIAS.map((c) => (
               <option key={c} value={c}>
@@ -196,170 +211,250 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
         </div>
 
         {/* Produção */}
-        <div style={styles.field}>
-          <label htmlFor="producaoDiaria" style={styles.label}>
+        <div className="af-field">
+          <label htmlFor="producaoDiaria" className="af-label">
             Produção Diária (L)
           </label>
           <input
             id="producaoDiaria"
             type="number"
+            inputMode="decimal"
             min={0}
-            max={200}
+            max={MAX_PRODUCAO}
             step={0.1}
             placeholder="Ex.: 18.5"
+            /* ✅ value pode ser '' — não força zero */
             value={form.producaoDiaria}
-            onChange={(e) =>
-              atualizar('producaoDiaria', Number(e.target.value) || 0)
-            }
+            onChange={(e) => {
+              const v = e.target.value;
+              atualizar('producaoDiaria', v === '' ? '' : Number(v));
+            }}
             onBlur={() => setTouched((t) => ({ ...t, producaoDiaria: true }))}
             aria-invalid={!!mostrarErro('producaoDiaria')}
-            style={{
-              ...styles.input,
-              ...(mostrarErro('producaoDiaria') ? styles.inputError : null),
-            }}
+            className={`af-input${mostrarErro('producaoDiaria') ? ' is-error' : ''}`}
           />
           {mostrarErro('producaoDiaria') && (
-            <span role="alert" style={styles.errorMsg}>
+            <span role="alert" className="af-error">
               {erros.producaoDiaria}
             </span>
           )}
         </div>
       </div>
 
-      <footer style={styles.actions}>
+      <div className="af-actions">
         <button
           type="submit"
           disabled={formInvalido && submetido}
-          style={{
-            ...styles.btnPrimary,
-            ...(formInvalido && submetido ? styles.btnDisabled : null),
-          }}
+          className="af-btn af-btn--primary"
         >
           {animalEditando ? 'Salvar alterações' : 'Cadastrar animal'}
         </button>
 
         {animalEditando && (
-          <button type="button" onClick={handleCancelar} style={styles.btnGhost}>
-            Cancelar <span style={styles.kbd}>Esc</span>
+          <button
+            type="button"
+            onClick={handleCancelar}
+            className="af-btn af-btn--ghost"
+          >
+            Cancelar <kbd className="af-kbd">Esc</kbd>
           </button>
         )}
-      </footer>
+      </div>
 
-      {/* Dica de atalho */}
       {!animalEditando && (
-        <p style={styles.hint}>
-          Dica: pressione <span style={styles.kbd}>Enter</span> para salvar
-          rapidamente.
+        <p className="af-hint">
+          Dica: pressione <kbd className="af-kbd">Enter</kbd> para salvar rapidamente.
         </p>
       )}
+
+      {/* ============================================================
+          CSS escopado — usa as variáveis do Dashboard (--surface, --ink, etc.)
+          ============================================================ */}
+      <style>{`
+        .af-form {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .af-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 6px 12px;
+          background: var(--brand-soft, #dcf5e3);
+          color: var(--brand, #14532d);
+          border: 1px solid var(--border, #d8e2dc);
+          border-radius: 999px;
+          font-size: 12.5px;
+          font-weight: 500;
+          width: fit-content;
+        }
+        .af-badge strong {
+          font-weight: 700;
+          color: inherit;
+        }
+
+        .af-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+          gap: 14px;
+        }
+
+        .af-field {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .af-label {
+          font-size: 12.5px;
+          font-weight: 700;
+          color: var(--ink-soft, #2a4033);
+          letter-spacing: .02em;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .af-counter {
+          font-size: 11.5px;
+          color: var(--muted, #3f5a48);
+          font-weight: 500;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .af-input,
+        .af-select {
+          width: 100%;
+          padding: 10px 14px;
+          font-size: 14px;
+          font-family: inherit;
+          color: var(--ink, #0a1810);
+          background: var(--surface, #fff);
+          border: 1.5px solid var(--border, #d8e2dc);
+          border-radius: 10px;
+          transition: border-color .15s, box-shadow .15s;
+          outline: none;
+        }
+        .af-input::placeholder {
+          color: var(--muted, #3f5a48);
+          opacity: 1;
+        }
+        .af-input:hover,
+        .af-select:hover {
+          border-color: var(--border-strong, #b0c3b8);
+        }
+        .af-input:focus,
+        .af-select:focus {
+          outline: none;
+          border-color: var(--brand, #14532d);
+          box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-2, #16a34a) 22%, transparent);
+        }
+        .af-input.is-error,
+        .af-select.is-error {
+          border-color: var(--danger, #991b1b);
+        }
+        .af-input.is-error:focus {
+          box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger, #991b1b) 18%, transparent);
+        }
+        .af-select {
+          cursor: pointer;
+        }
+
+        .af-error {
+          font-size: 12px;
+          color: var(--danger, #991b1b);
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .af-error::before {
+          content: "";
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: currentColor;
+          flex-shrink: 0;
+        }
+
+        .af-actions {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          padding-top: 6px;
+        }
+
+        .af-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+          padding: 10px 18px;
+          border-radius: 10px;
+          font-size: 13.5px;
+          font-weight: 600;
+          font-family: inherit;
+          cursor: pointer;
+          border: 1.5px solid transparent;
+          transition: transform .12s, background .15s, border-color .15s, box-shadow .15s, color .15s;
+          white-space: nowrap;
+        }
+        .af-btn--primary {
+          background: var(--brand, #14532d);
+          color: var(--brand-ink, #fff);
+          box-shadow: 0 6px 16px -8px rgba(20,83,45,.5);
+        }
+        .af-btn--primary:hover:not(:disabled) {
+          transform: translateY(-1px);
+          background: var(--brand-3, #052e16);
+          color: var(--brand-ink, #fff);
+        }
+        [data-theme="escuro"] .af-btn--primary:hover:not(:disabled) {
+          background: #86efac;
+          color: #052e16;
+        }
+        .af-btn--ghost {
+          background: transparent;
+          color: var(--brand, #14532d);
+          border-color: var(--border, #d8e2dc);
+        }
+        .af-btn--ghost:hover:not(:disabled) {
+          background: var(--brand-soft, #dcf5e3);
+          border-color: var(--brand, #14532d);
+        }
+        [data-theme="escuro"] .af-btn--ghost {
+          color: var(--brand-3, #a7f3b8);
+        }
+        [data-theme="escuro"] .af-btn--ghost:hover:not(:disabled) {
+          color: var(--brand-3, #a7f3b8);
+        }
+        .af-btn:disabled {
+          opacity: .55;
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
+        }
+
+        .af-kbd {
+          display: inline-flex;
+          align-items: center;
+          padding: 1px 6px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 700;
+          font-family: inherit;
+          background: var(--surface-2, #f2f6f4);
+          border: 1px solid var(--border, #d8e2dc);
+          color: var(--ink-soft, #2a4033);
+        }
+
+        .af-hint {
+          margin: 0;
+          font-size: 12.5px;
+          color: var(--muted, #3f5a48);
+          line-height: 1.5;
+        }
+      `}</style>
     </form>
   );
 }
-
-// ---------- Estilos ----------
-const styles: Record<string, React.CSSProperties> = {
-  form: {
-    background: '#fff',
-    border: '1px solid #e3ece3',
-    borderRadius: 12,
-    padding: '20px 20px 16px',
-    marginBottom: 24,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-    fontFamily: 'system-ui, -apple-system, sans-serif',
-  },
-  header: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  title: { margin: 0, fontSize: '1.1rem', color: '#1f5f2b' },
-  badge: {
-    background: '#fff4d6',
-    color: '#8a6300',
-    padding: '4px 10px',
-    borderRadius: 999,
-    fontSize: '0.8rem',
-  },
-
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-    gap: 14,
-  },
-  field: { display: 'flex', flexDirection: 'column', gap: 4 },
-  label: {
-    fontSize: '0.8rem',
-    fontWeight: 600,
-    color: '#3b5a3b',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  counter: { fontSize: '0.7rem', color: '#8aa08a', fontWeight: 400 },
-
-  input: {
-    padding: '10px 12px',
-    border: '1px solid #cddccd',
-    borderRadius: 8,
-    fontSize: '0.95rem',
-    outline: 'none',
-    transition: 'border-color 0.15s, box-shadow 0.15s',
-    background: '#fff',
-  },
-  inputError: {
-    borderColor: '#d94c4c',
-    boxShadow: '0 0 0 3px rgba(217,76,76,0.12)',
-  },
-  select: {
-    padding: '10px 12px',
-    border: '1px solid #cddccd',
-    borderRadius: 8,
-    fontSize: '0.95rem',
-    background: '#fff',
-    outline: 'none',
-  },
-  errorMsg: { color: '#d94c4c', fontSize: '0.78rem' },
-
-  actions: {
-    display: 'flex',
-    gap: 10,
-    marginTop: 16,
-    flexWrap: 'wrap',
-  },
-  btnPrimary: {
-    padding: '10px 18px',
-    background: '#1f5f2b',
-    color: '#fff',
-    border: 'none',
-    borderRadius: 8,
-    cursor: 'pointer',
-    fontWeight: 600,
-    fontSize: '0.95rem',
-  },
-  btnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
-  btnGhost: {
-    padding: '10px 18px',
-    background: 'transparent',
-    color: '#1f5f2b',
-    border: '1px solid #1f5f2b',
-    borderRadius: 8,
-    cursor: 'pointer',
-    fontWeight: 500,
-    fontSize: '0.95rem',
-  },
-  kbd: {
-    background: '#eef4ee',
-    border: '1px solid #cddccd',
-    borderRadius: 4,
-    padding: '1px 6px',
-    fontSize: '0.75rem',
-    color: '#3b5a3b',
-    marginLeft: 4,
-  },
-  hint: { margin: '12px 0 0', fontSize: '0.78rem', color: '#8aa08a' },
-};
