@@ -6,6 +6,7 @@ export interface Usuario {
   id?: string | number;
   nome: string;
   email: string;
+  ativo?: boolean;
   confirmado?: boolean;
 }
 
@@ -26,7 +27,12 @@ export interface UsuarioCadastroDTO {
   senha: string;
 }
 
+export interface ExcluirContaDTO {
+  senha: string;
+}
+
 export interface MensagemRespostaDTO {
+  sucesso?: boolean;
   mensagem: string;
 }
 

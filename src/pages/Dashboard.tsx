@@ -10,6 +10,7 @@ import AnimalForm from '../components/AnimalForm';
 import AnimalList from '../components/AnimalList';
 import LogoutButton from '../components/LogoutButton';
 import { useAuth } from '../contexts/AuthContext';
+import { authService } from '../services/auth.service';
 import type { Animal } from '../types';
 
 const STORAGE_KEY = 'agrogestor:animais';
@@ -117,6 +118,12 @@ export default function Dashboard() {
   const [paletaAberta, setPaletaAberta] = useState(false);
   const [menuUsuarioAberto, setMenuUsuarioAberto] = useState(false);
 
+  // Exclusão de conta
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
+  const [senhaExcluir, setSenhaExcluir] = useState('');
+  const [excluindo, setExcluindo] = useState(false);
+  const [erroExcluir, setErroExcluir] = useState<string | null>(null);
+
   const buscaDeferred = useDeferredValue(busca);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -130,11 +137,12 @@ export default function Dashboard() {
       if (e.key === 'Escape') {
         setPaletaAberta(false);
         setMenuUsuarioAberto(false);
+        if (!excluindo) setModalExcluirAberto(false);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [excluindo]);
 
   // Fecha menu do usuário ao clicar fora
   useEffect(() => {
@@ -198,6 +206,36 @@ export default function Dashboard() {
     },
     [importar, push]
   );
+
+  // Exclusão de conta
+  const abrirModalExcluir = () => {
+    setSenhaExcluir('');
+    setErroExcluir(null);
+    setModalExcluirAberto(true);
+  };
+
+  const handleExcluirConta = async () => {
+    if (!senhaExcluir.trim()) {
+      setErroExcluir('Digite sua senha para continuar.');
+      return;
+    }
+    setExcluindo(true);
+    setErroExcluir(null);
+    try {
+      await authService.excluirConta({ senha: senhaExcluir });
+      // Limpa cache local de animais também
+      localStorage.removeItem(STORAGE_KEY);
+      // Recarrega pra landing (sem token)
+      window.location.href = '/';
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { mensagem?: string } } };
+      setErroExcluir(
+        apiErr?.response?.data?.mensagem ||
+          'Não foi possível excluir a conta. Verifique sua senha.'
+      );
+      setExcluindo(false);
+    }
+  };
 
   // Filtro
   const animaisFiltrados = useMemo(() => {
@@ -327,7 +365,7 @@ export default function Dashboard() {
               style={{ display: 'none' }}
             />
 
-            {/* ============ MENU DO USUÁRIO + LOGOUT ============ */}
+            {/* ============ MENU DO USUÁRIO ============ */}
             <div
               style={{ position: 'relative' }}
               onClick={(e) => e.stopPropagation()}
@@ -692,73 +730,269 @@ export default function Dashboard() {
 
           {/* ============ ABA: CONFIGURAÇÕES ============ */}
           {aba === 'config' && (
-            <section style={{ ...base.panel, background: t.surface, borderColor: t.border }}>
-              <h3 style={{ margin: '0 0 16px', fontSize: 14, color: t.text }}>Preferências</h3>
+            <>
+              <section style={{ ...base.panel, background: t.surface, borderColor: t.border }}>
+                <h3 style={{ margin: '0 0 16px', fontSize: 14, color: t.text }}>Preferências</h3>
 
-              <div style={base.configRow}>
-                <div>
-                  <div style={{ fontWeight: 600, color: t.text }}>Tema da interface</div>
-                  <div style={{ fontSize: 12, color: t.muted }}>Alterna entre claro e escuro</div>
+                <div style={base.configRow}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: t.text }}>Tema da interface</div>
+                    <div style={{ fontSize: 12, color: t.muted }}>Alterna entre claro e escuro</div>
+                  </div>
+                  <button onClick={alternar} style={{ ...base.btnPrimary, background: t.accent }}>
+                    {tema === 'claro' ? '🌙 Escuro' : '☀️ Claro'}
+                  </button>
                 </div>
-                <button onClick={alternar} style={{ ...base.btnPrimary, background: t.accent }}>
-                  {tema === 'claro' ? '🌙 Escuro' : '☀️ Claro'}
-                </button>
-              </div>
 
-              <div style={base.configRow}>
-                <div>
-                  <div style={{ fontWeight: 600, color: t.text }}>Backup dos dados</div>
-                  <div style={{ fontSize: 12, color: t.muted }}>
-                    Exporte ou importe em formato JSON
+                <div style={base.configRow}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: t.text }}>Backup dos dados</div>
+                    <div style={{ fontSize: 12, color: t.muted }}>
+                      Exporte ou importe em formato JSON
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button onClick={exportarJSON} style={{ ...base.btnGhost, borderColor: t.border, color: t.text }}>
+                      Exportar
+                    </button>
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{ ...base.btnGhost, borderColor: t.border, color: t.text }}
+                    >
+                      Importar
+                    </button>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button onClick={exportarJSON} style={{ ...base.btnGhost, borderColor: t.border, color: t.text }}>
-                    Exportar
-                  </button>
+
+                <div style={base.configRow}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: t.text }}>Conta</div>
+                    <div style={{ fontSize: 12, color: t.muted }}>
+                      {usuario?.email ?? 'Sessão ativa'}
+                    </div>
+                  </div>
+                  <LogoutButton />
+                </div>
+
+                <div style={base.configRow}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: t.text }}>Zerar rebanho</div>
+                    <div style={{ fontSize: 12, color: t.muted }}>
+                      Remove todos os animais (irreversível)
+                    </div>
+                  </div>
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{ ...base.btnGhost, borderColor: t.border, color: t.text }}
+                    onClick={() => {
+                      if (confirm('Apagar TODOS os animais? Esta ação não pode ser desfeita.')) {
+                        importar([]);
+                        push('Rebanho zerado.', 'info');
+                      }
+                    }}
+                    style={{ ...base.btnPrimary, background: '#d94c4c' }}
                   >
-                    Importar
+                    Zerar
                   </button>
                 </div>
-              </div>
+              </section>
 
-              {/* ============ CONTA / LOGOUT ============ */}
-              <div style={base.configRow}>
-                <div>
-                  <div style={{ fontWeight: 600, color: t.text }}>Conta</div>
-                  <div style={{ fontSize: 12, color: t.muted }}>
-                    {usuario?.email ?? 'Sessão ativa'}
-                  </div>
-                </div>
-                <LogoutButton />
-              </div>
-
-              <div style={base.configRow}>
-                <div>
-                  <div style={{ fontWeight: 600, color: t.text }}>Zerar rebanho</div>
-                  <div style={{ fontSize: 12, color: t.muted }}>
-                    Remove todos os animais (irreversível)
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    if (confirm('Apagar TODOS os animais? Esta ação não pode ser desfeita.')) {
-                      importar([]);
-                      push('Rebanho zerado.', 'info');
-                    }
+              {/* ============ ZONA DE PERIGO ============ */}
+              <section
+                style={{
+                  border: '1px solid #f5c6c6',
+                  borderRadius: 12,
+                  padding: '20px 22px',
+                  background: tema === 'escuro' ? 'rgba(217,76,76,0.08)' : '#fff8f8',
+                }}
+              >
+                <h3
+                  style={{
+                    margin: '0 0 6px',
+                    fontSize: 14,
+                    color: '#a03030',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
                   }}
-                  style={{ ...base.btnPrimary, background: '#d94c4c' }}
                 >
-                  Zerar
-                </button>
-              </div>
-            </section>
+                  ⚠️ Zona de Perigo
+                </h3>
+                <p style={{ fontSize: 12, color: t.muted, margin: '0 0 16px' }}>
+                  Ações irreversíveis. Tenha certeza antes de continuar.
+                </p>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 16,
+                    flexWrap: 'wrap',
+                    paddingTop: 12,
+                    borderTop: '1px solid rgba(217,76,76,0.2)',
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, color: t.text }}>Excluir minha conta</div>
+                    <div style={{ fontSize: 12, color: t.muted }}>
+                      Apaga permanentemente sua conta e todos os seus dados (animais, registros).
+                    </div>
+                  </div>
+                  <button
+                    onClick={abrirModalExcluir}
+                    style={{
+                      padding: '10px 18px',
+                      background: '#d94c4c',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                    }}
+                  >
+                    Excluir conta
+                  </button>
+                </div>
+              </section>
+            </>
           )}
         </div>
       </main>
+
+      {/* ============ MODAL: EXCLUIR CONTA ============ */}
+      {modalExcluirAberto && (
+        <div
+          onClick={() => !excluindo && setModalExcluirAberto(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(2px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 460,
+              background: t.surface,
+              border: '1px solid #f5c6c6',
+              borderRadius: 14,
+              padding: '24px 24px 20px',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              color: t.text,
+            }}
+          >
+            <div style={{ fontSize: 40, textAlign: 'center', marginBottom: 8 }}>⚠️</div>
+            <h2
+              style={{
+                margin: '0 0 8px',
+                fontSize: 20,
+                color: '#a03030',
+                textAlign: 'center',
+              }}
+            >
+              Excluir conta permanentemente?
+            </h2>
+            <p
+              style={{
+                fontSize: 13,
+                color: t.muted,
+                textAlign: 'center',
+                lineHeight: 1.5,
+                margin: '0 0 20px',
+              }}
+            >
+              Esta ação é <strong style={{ color: '#a03030' }}>irreversível</strong>. Todos os
+              seus animais, relatórios e dados serão apagados permanentemente.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+              <label htmlFor="senha-excluir" style={{ fontSize: 12, fontWeight: 600, color: t.text }}>
+                Digite sua senha para confirmar
+              </label>
+              <input
+                id="senha-excluir"
+                type="password"
+                placeholder="Sua senha atual"
+                value={senhaExcluir}
+                onChange={(e) => setSenhaExcluir(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !excluindo) handleExcluirConta();
+                }}
+                autoFocus
+                disabled={excluindo}
+                autoComplete="current-password"
+                style={{
+                  width: '100%',
+                  padding: '11px 14px',
+                  border: erroExcluir ? '1px solid #d94c4c' : `1px solid ${t.border}`,
+                  borderRadius: 8,
+                  fontSize: 14,
+                  outline: 'none',
+                  background: t.surface,
+                  color: t.text,
+                  fontFamily: 'inherit',
+                  boxSizing: 'border-box',
+                }}
+              />
+              {erroExcluir && (
+                <span style={{ fontSize: 12, color: '#a03030', fontWeight: 500 }}>
+                  {erroExcluir}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setModalExcluirAberto(false)}
+                disabled={excluindo}
+                style={{
+                  padding: '10px 16px',
+                  background: 'transparent',
+                  border: `1px solid ${t.border}`,
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: excluindo ? 'not-allowed' : 'pointer',
+                  color: t.text,
+                  fontFamily: 'inherit',
+                  opacity: excluindo ? 0.5 : 1,
+                }}
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleExcluirConta}
+                disabled={excluindo || !senhaExcluir.trim()}
+                style={{
+                  padding: '10px 18px',
+                  background: '#d94c4c',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor:
+                    excluindo || !senhaExcluir.trim() ? 'not-allowed' : 'pointer',
+                  fontFamily: 'inherit',
+                  opacity: excluindo || !senhaExcluir.trim() ? 0.5 : 1,
+                }}
+              >
+                {excluindo ? 'Excluindo...' : 'Sim, excluir conta'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ============ COMMAND PALETTE ============ */}
       {paletaAberta && (

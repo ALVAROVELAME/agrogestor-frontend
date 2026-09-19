@@ -4,6 +4,7 @@ import type {
   LoginRespostaDTO,
   Usuario,
   UsuarioCadastroDTO,
+  ExcluirContaDTO,
   MensagemRespostaDTO,
 } from '../types';
 
@@ -29,6 +30,21 @@ export const authService = {
 
   async me(): Promise<Usuario> {
     const { data } = await api.get<Usuario>('/api/auth/me');
+    return data;
+  },
+
+  /**
+   * Exclui a conta do usuário logado.
+   * Requer a senha atual para confirmação.
+   * Após sucesso, limpa o localStorage.
+   */
+  async excluirConta(dados: ExcluirContaDTO): Promise<MensagemRespostaDTO> {
+    const { data } = await api.delete<MensagemRespostaDTO>('/api/usuarios/me', {
+      data: dados,
+    });
+    // Limpa os dados locais após exclusão bem-sucedida
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
     return data;
   },
 
