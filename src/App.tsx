@@ -5,6 +5,8 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Status from './pages/Status';
 import ConfirmarEmail from './pages/ConfirmarEmail';
+import Termos from './pages/Termos';
+import Privacidade from './pages/Privacidade';
 import { AuthProvider } from './contexts/AuthContext';
 import RotaProtegida from './components/RotaProtegida';
 import RotaPublica from './components/RotaPublica';
@@ -43,6 +45,10 @@ export default function App() {
           {/* ============ PÁGINAS DE STATUS (sempre acessíveis) ============ */}
           <Route path="/status" element={<Status />} />
           <Route path="/confirmar" element={<ConfirmarEmail />} />
+
+          {/* ============ PÁGINAS LEGAIS (sempre acessíveis) ============ */}
+          <Route path="/termos" element={<Termos />} />
+          <Route path="/privacidade" element={<Privacidade />} />
 
           {/* ============ ROTAS PROTEGIDAS ============ */}
           <Route

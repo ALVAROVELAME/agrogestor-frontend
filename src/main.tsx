@@ -3,12 +3,15 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-const container = document.getElementById('root');
+// Aplica o tema salvo no <html data-theme="dark|light">
+const temaSalvo = localStorage.getItem('agrogestor:tema');
+if (temaSalvo === 'escuro') {
+  document.documentElement.setAttribute('data-theme', 'dark');
+}
 
+const container = document.getElementById('root');
 if (!container) {
-  throw new Error(
-    'Elemento #root não encontrado. Verifique se o index.html contém <div id="root"></div>'
-  );
+  throw new Error('Elemento #root não encontrado.');
 }
 
 createRoot(container).render(
