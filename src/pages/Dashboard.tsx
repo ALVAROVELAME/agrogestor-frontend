@@ -10,6 +10,7 @@ import AnimalForm from '../components/AnimalForm';
 import LogoutButton from '../components/LogoutButton';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/auth.service';
+import { animaisService } from '../services/animais.service';
 import type { Animal } from '../types';
 
 const STORAGE_KEY = 'agrogestor:animais';
@@ -18,6 +19,8 @@ const THEME_KEY = 'agrogestor:tema';
 type Aba = 'visao' | 'rebanho' | 'relatorios' | 'config';
 type Tema = 'claro' | 'escuro';
 type Toast = { id: string; texto: string; tipo: 'sucesso' | 'erro' | 'info' };
+
+type ErroApi = { response?: { data?: { mensagem?: string } } };
 
 // ============================================================
 // Utils
@@ -46,35 +49,75 @@ const uid = () =>
 // Hooks
 // ============================================================
 function useAnimais() {
-  const [animais, setAnimais] = useState<Animal[]>(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as Animal[]) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [animais, setAnimais] = useState<Animal[]>([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
+  // Carrega do backend ao montar
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(animais));
-  }, [animais]);
-
-  const salvar = useCallback((animal: Animal) => {
-    setAnimais((prev) => {
-      if (animal.id) return prev.map((a) => (a.id === animal.id ? animal : a));
-      return [...prev, { ...animal, id: uid() }];
-    });
+    let ativo = true;
+    (async () => {
+      try {
+        setCarregando(true);
+        setErro(null);
+        const dados = await animaisService.listar();
+        if (ativo) setAnimais(dados);
+      } catch (err) {
+        if (ativo) {
+          const msg =
+            (err as ErroApi)?.response?.data?.mensagem ||
+            'Não foi possível carregar o rebanho. Verifique sua conexão.';
+          setErro(msg);
+        }
+      } finally {
+        if (ativo) setCarregando(false);
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
   }, []);
 
-  // ✅ Aceita undefined/null — proteção centralizada no hook
-  const excluir = useCallback((id: string | number | undefined | null) => {
-    if (id === undefined || id === null) return;
-    setAnimais((prev) => prev.filter((a) => a.id !== id));
+  // Cria ou atualiza via API
+  const salvar = useCallback(async (animal: Animal) => {
+    if (animal.id) {
+      const atualizado = await animaisService.atualizar(animal);
+      setAnimais((prev) =>
+        prev.map((a) => (a.id === atualizado.id ? atualizado : a))
+      );
+      return atualizado;
+    }
+    const criado = await animaisService.criar(animal);
+    setAnimais((prev) => [...prev, criado]);
+    return criado;
   }, []);
 
-  const importar = useCallback((novos: Animal[]) => setAnimais(novos), []);
+  // Exclui via API
+  const excluir = useCallback(
+    async (id: string | number | undefined | null) => {
+      if (id === undefined || id === null) return;
+      await animaisService.excluir(id);
+      setAnimais((prev) => prev.filter((a) => a.id !== id));
+    },
+    []
+  );
 
-  return { animais, salvar, excluir, importar };
+  // Importação em massa (cria um por um via API)
+  const importar = useCallback(async (novos: Animal[]) => {
+    const criados: Animal[] = [];
+    for (const a of novos) {
+      const c = await animaisService.criar({
+        brinco: a.brinco,
+        nome: a.nome,
+        categoria: a.categoria,
+        producaoDiaria: a.producaoDiaria,
+      });
+      criados.push(c);
+    }
+    setAnimais((prev) => [...prev, ...criados]);
+  }, []);
+
+  return { animais, salvar, excluir, importar, carregando, erro };
 }
 
 function useTema() {
@@ -550,6 +593,37 @@ const STYLES = `
 }
 .dash-panel-meta { font-size: 12.5px; color: var(--muted); font-weight: 500; }
 .dash-panel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Painel de status (carregando / erro) */
+.dash-status-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 32px 22px;
+  text-align: center;
+}
+.dash-status-panel.is-error {
+  background: var(--danger-soft);
+  border-color: var(--danger-line);
+}
+.dash-status-panel .dash-spinner {
+  width: 28px; height: 28px;
+  margin: 0 auto 14px;
+  border: 3px solid var(--border);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: dashSpin .8s linear infinite;
+}
+@keyframes dashSpin { to { transform: rotate(360deg); } }
+.dash-status-text {
+  font-size: 13.5px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.dash-status-panel.is-error .dash-status-text {
+  color: var(--danger);
+  font-weight: 600;
+}
 
 /* ---------- Gráfico ---------- */
 .dash-chart-rows { display: flex; flex-direction: column; gap: 12px; }
@@ -1249,7 +1323,7 @@ const STYLES = `
 @media (prefers-reduced-motion: reduce) {
   .dash-modal, .dash-palette, .dash-toast,
   .dash-menu, .dash-mobile-drawer, .dash-overlay, .dash-mobile-backdrop,
-  .dash-chart-fill {
+  .dash-chart-fill, .dash-status-panel .dash-spinner {
     animation: none !important;
   }
   .dash * { scroll-behavior: auto !important; }
@@ -1278,7 +1352,7 @@ const IconTrash = () => (
 // Componente principal
 // ============================================================
 export default function Dashboard() {
-  const { animais, salvar, excluir, importar } = useAnimais();
+  const { animais, salvar, excluir, importar, carregando, erro } = useAnimais();
   const { tema, alternar } = useTema();
   const { toasts, push, remover } = useToasts();
   const { usuario } = useAuth();
@@ -1356,23 +1430,37 @@ export default function Dashboard() {
   }, [paletaAberta, modalExcluirAberto, drawerMobileAberto]);
 
   const handleSalvar = useCallback(
-    (animal: Animal) => {
-      salvar(animal);
-      setAnimalEditando(null);
-      push(animal.id ? 'Animal atualizado' : 'Animal cadastrado', 'sucesso');
+    async (animal: Animal) => {
+      try {
+        await salvar(animal);
+        setAnimalEditando(null);
+        push(animal.id ? 'Animal atualizado' : 'Animal cadastrado', 'sucesso');
+      } catch (err) {
+        const msg =
+          (err as ErroApi)?.response?.data?.mensagem ||
+          'Erro ao salvar animal. Tente novamente.';
+        push(msg, 'erro');
+      }
     },
     [salvar, push]
   );
 
   const handleExcluir = useCallback(
-    (animal: Animal) => {
+    async (animal: Animal) => {
       const ok = window.confirm(
         `Excluir "${animal.nome}" (brinco ${animal.brinco})? Esta ação não pode ser desfeita.`
       );
       if (!ok) return;
-      excluir(animal.id);
-      if (animalEditando?.id === animal.id) setAnimalEditando(null);
-      push(`"${animal.nome}" foi excluído`, 'info');
+      try {
+        await excluir(animal.id);
+        if (animalEditando?.id === animal.id) setAnimalEditando(null);
+        push(`"${animal.nome}" foi excluído`, 'info');
+      } catch (err) {
+        const msg =
+          (err as ErroApi)?.response?.data?.mensagem ||
+          'Erro ao excluir animal. Tente novamente.';
+        push(msg, 'erro');
+      }
     },
     [excluir, push, animalEditando]
   );
@@ -1393,15 +1481,17 @@ export default function Dashboard() {
       const file = e.target.files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         try {
           const data = JSON.parse(String(reader.result));
-          if (Array.isArray(data)) {
-            importar(data);
-            push(`${data.length} animais importados`, 'sucesso');
-          } else push('Arquivo inválido', 'erro');
+          if (!Array.isArray(data)) {
+            push('Arquivo inválido', 'erro');
+            return;
+          }
+          await importar(data);
+          push(`${data.length} animais importados`, 'sucesso');
         } catch {
-          push('Erro ao ler arquivo', 'erro');
+          push('Erro ao importar arquivo', 'erro');
         }
       };
       reader.readAsText(file);
@@ -1409,6 +1499,23 @@ export default function Dashboard() {
     },
     [importar, push]
   );
+
+  const zerarRebanho = useCallback(async () => {
+    if (!confirm('Apagar TODOS os animais? Esta ação não pode ser desfeita.')) return;
+    try {
+      for (const a of animais) {
+        if (a.id !== undefined && a.id !== null) {
+          await excluir(a.id);
+        }
+      }
+      push('Rebanho zerado', 'info');
+    } catch (err) {
+      const msg =
+        (err as ErroApi)?.response?.data?.mensagem ||
+        'Erro ao zerar rebanho. Tente novamente.';
+      push(msg, 'erro');
+    }
+  }, [animais, excluir, push]);
 
   const abrirModalExcluir = () => {
     setSenhaExcluir('');
@@ -1428,7 +1535,7 @@ export default function Dashboard() {
       localStorage.removeItem(STORAGE_KEY);
       window.location.href = '/';
     } catch (err: unknown) {
-      const apiErr = err as { response?: { data?: { mensagem?: string } } };
+      const apiErr = err as ErroApi;
       setErroExcluir(
         apiErr?.response?.data?.mensagem ||
           'Não foi possível excluir a conta. Verifique sua senha.'
@@ -1745,159 +1852,181 @@ export default function Dashboard() {
                   />
                 </section>
 
-                <section className="dash-panel" aria-labelledby="rebanho-form-title">
-                  <div className="dash-panel-head">
-                    <h2 id="rebanho-form-title" className="dash-panel-title">
-                      {animalEditando ? 'Editar animal' : 'Novo animal'}
-                    </h2>
-                    <span className="dash-panel-meta">
-                      {animalEditando
-                        ? `Editando ${animalEditando.nome} · brinco ${animalEditando.brinco}`
-                        : 'Preencha os dados abaixo para cadastrar'}
-                    </span>
+                {/* ---------- ESTADO: CARREGANDO / ERRO ---------- */}
+                {carregando && (
+                  <div className="dash-status-panel" role="status" aria-live="polite">
+                    <div className="dash-spinner" aria-hidden="true" />
+                    <p className="dash-status-text">Carregando rebanho…</p>
                   </div>
-                  <div className="dash-form-wrap">
-                    <AnimalForm
-                      animalEditando={animalEditando}
-                      onSalvar={handleSalvar}
-                      onCancelar={() => setAnimalEditando(null)}
-                    />
-                  </div>
-                </section>
+                )}
 
-                <section className="dash-panel" aria-labelledby="rebanho-list-title">
-                  <div className="dash-panel-head">
-                    <h2 id="rebanho-list-title" className="dash-panel-title">
-                      Lista de animais
-                    </h2>
-                    <span className="dash-panel-meta">
-                      {animaisFiltrados.length} de {animais.length}
-                      {animaisFiltrados.length === 1 ? ' animal' : ' animais'}
-                    </span>
+                {!carregando && erro && (
+                  <div className="dash-status-panel is-error" role="alert">
+                    <p className="dash-status-text">
+                      <span aria-hidden="true">⚠️</span> {erro}
+                    </p>
                   </div>
+                )}
 
-                  <div className="dash-filters" role="search" aria-label="Filtros de animais" style={{ marginBottom: 16 }}>
-                    <input
-                      type="search"
-                      className="dash-input"
-                      placeholder="Buscar por nome ou brinco…"
-                      value={busca}
-                      onChange={(e) => setBusca(e.target.value)}
-                      aria-label="Buscar animais"
-                    />
-                    <select
-                      className="dash-select"
-                      value={categoriaFiltro}
-                      onChange={(e) => setCategoriaFiltro(e.target.value as typeof categoriaFiltro)}
-                      aria-label="Filtrar por categoria"
-                    >
-                      {['Todas', 'Bezerra', 'Novilha', 'Vaca em Lactação', 'Vaca Seca'].map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                    {filtrosAtivos && (
-                      <button
-                        type="button"
-                        className="dash-btn dash-btn-ghost"
-                        onClick={limparFiltros}
-                      >
-                        Limpar filtros
-                      </button>
-                    )}
-                  </div>
-
-                  {animaisFiltrados.length === 0 ? (
-                    <div className="dash-empty">
-                      <span className="dash-empty-icon" aria-hidden="true">
-                        {animais.length === 0 ? '🐄' : '🔎'}
+                {/* ---------- FORMULÁRIO ---------- */}
+                {!carregando && !erro && (
+                  <section className="dash-panel" aria-labelledby="rebanho-form-title">
+                    <div className="dash-panel-head">
+                      <h2 id="rebanho-form-title" className="dash-panel-title">
+                        {animalEditando ? 'Editar animal' : 'Novo animal'}
+                      </h2>
+                      <span className="dash-panel-meta">
+                        {animalEditando
+                          ? `Editando ${animalEditando.nome} · brinco ${animalEditando.brinco}`
+                          : 'Preencha os dados abaixo para cadastrar'}
                       </span>
-                      <h3 className="dash-empty-title">
-                        {animais.length === 0 ? 'Nenhum animal cadastrado' : 'Nenhum resultado'}
-                      </h3>
-                      <p className="dash-empty-desc">
-                        {animais.length === 0
-                          ? 'Cadastre seu primeiro animal usando o formulário acima para começar a acompanhar a produção.'
-                          : 'Nenhum animal corresponde aos filtros aplicados. Tente ajustar a busca ou o filtro de categoria.'}
-                      </p>
-                      {animais.length > 0 && (
+                    </div>
+                    <div className="dash-form-wrap">
+                      <AnimalForm
+                        animalEditando={animalEditando}
+                        onSalvar={handleSalvar}
+                        onCancelar={() => setAnimalEditando(null)}
+                      />
+                    </div>
+                  </section>
+                )}
+
+                {/* ---------- LISTA ---------- */}
+                {!carregando && !erro && (
+                  <section className="dash-panel" aria-labelledby="rebanho-list-title">
+                    <div className="dash-panel-head">
+                      <h2 id="rebanho-list-title" className="dash-panel-title">
+                        Lista de animais
+                      </h2>
+                      <span className="dash-panel-meta">
+                        {animaisFiltrados.length} de {animais.length}
+                        {animaisFiltrados.length === 1 ? ' animal' : ' animais'}
+                      </span>
+                    </div>
+
+                    <div className="dash-filters" role="search" aria-label="Filtros de animais" style={{ marginBottom: 16 }}>
+                      <input
+                        type="search"
+                        className="dash-input"
+                        placeholder="Buscar por nome ou brinco…"
+                        value={busca}
+                        onChange={(e) => setBusca(e.target.value)}
+                        aria-label="Buscar animais"
+                      />
+                      <select
+                        className="dash-select"
+                        value={categoriaFiltro}
+                        onChange={(e) => setCategoriaFiltro(e.target.value as typeof categoriaFiltro)}
+                        aria-label="Filtrar por categoria"
+                      >
+                        {['Todas', 'Bezerra', 'Novilha', 'Vaca em Lactação', 'Vaca Seca'].map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                      {filtrosAtivos && (
                         <button
                           type="button"
-                          className="dash-btn dash-btn-primary"
+                          className="dash-btn dash-btn-ghost"
                           onClick={limparFiltros}
                         >
                           Limpar filtros
                         </button>
                       )}
                     </div>
-                  ) : (
-                    <>
-                      <p className="dash-table-hint" aria-hidden="true">
-                        <span>↔</span> Arraste para o lado para ver todas as colunas
-                      </p>
 
-                      <div
-                        className="dash-table-wrap"
-                        role="region"
-                        aria-label="Tabela de animais"
-                        tabIndex={0}
-                      >
-                        <table className="dash-table">
-                          <caption className="sr-only">
-                            Lista de animais do rebanho. Use os botões na coluna de ações para editar ou excluir.
-                          </caption>
-                          <thead>
-                            <tr>
-                              <th scope="col">Brinco</th>
-                              <th scope="col">Nome</th>
-                              <th scope="col">Categoria</th>
-                              <th scope="col" className="num">Produção</th>
-                              <th scope="col" className="actions-col">
-                                <span className="sr-only">Ações</span>
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {animaisFiltrados.map((a) => (
-                              <tr key={String(a.id)}>
-                                <td className="brinco-cell">{a.brinco}</td>
-                                <td>{a.nome}</td>
-                                <td>
-                                  <span className="dash-cat-badge">{a.categoria}</span>
-                                </td>
-                                <td className="num">{a.producaoDiaria} L</td>
-                                <td className="actions-cell">
-                                  <div className="dash-row-actions">
-                                    <button
-                                      type="button"
-                                      className="dash-row-btn"
-                                      onClick={() => {
-                                        setAnimalEditando(a);
-                                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                                      }}
-                                      aria-label={`Editar ${a.nome}`}
-                                      title="Editar"
-                                    >
-                                      <IconEdit />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="dash-row-btn is-danger"
-                                      onClick={() => handleExcluir(a)}
-                                      aria-label={`Excluir ${a.nome}`}
-                                      title="Excluir"
-                                    >
-                                      <IconTrash />
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                    {animaisFiltrados.length === 0 ? (
+                      <div className="dash-empty">
+                        <span className="dash-empty-icon" aria-hidden="true">
+                          {animais.length === 0 ? '🐄' : '🔎'}
+                        </span>
+                        <h3 className="dash-empty-title">
+                          {animais.length === 0 ? 'Nenhum animal cadastrado' : 'Nenhum resultado'}
+                        </h3>
+                        <p className="dash-empty-desc">
+                          {animais.length === 0
+                            ? 'Cadastre seu primeiro animal usando o formulário acima para começar a acompanhar a produção.'
+                            : 'Nenhum animal corresponde aos filtros aplicados. Tente ajustar a busca ou o filtro de categoria.'}
+                        </p>
+                        {animais.length > 0 && (
+                          <button
+                            type="button"
+                            className="dash-btn dash-btn-primary"
+                            onClick={limparFiltros}
+                          >
+                            Limpar filtros
+                          </button>
+                        )}
                       </div>
-                    </>
-                  )}
-                </section>
+                    ) : (
+                      <>
+                        <p className="dash-table-hint" aria-hidden="true">
+                          <span>↔</span> Arraste para o lado para ver todas as colunas
+                        </p>
+
+                        <div
+                          className="dash-table-wrap"
+                          role="region"
+                          aria-label="Tabela de animais"
+                          tabIndex={0}
+                        >
+                          <table className="dash-table">
+                            <caption className="sr-only">
+                              Lista de animais do rebanho. Use os botões na coluna de ações para editar ou excluir.
+                            </caption>
+                            <thead>
+                              <tr>
+                                <th scope="col">Brinco</th>
+                                <th scope="col">Nome</th>
+                                <th scope="col">Categoria</th>
+                                <th scope="col" className="num">Produção</th>
+                                <th scope="col" className="actions-col">
+                                  <span className="sr-only">Ações</span>
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {animaisFiltrados.map((a) => (
+                                <tr key={String(a.id)}>
+                                  <td className="brinco-cell">{a.brinco}</td>
+                                  <td>{a.nome}</td>
+                                  <td>
+                                    <span className="dash-cat-badge">{a.categoria}</span>
+                                  </td>
+                                  <td className="num">{a.producaoDiaria} L</td>
+                                  <td className="actions-cell">
+                                    <div className="dash-row-actions">
+                                      <button
+                                        type="button"
+                                        className="dash-row-btn"
+                                        onClick={() => {
+                                          setAnimalEditando(a);
+                                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                                        }}
+                                        aria-label={`Editar ${a.nome}`}
+                                        title="Editar"
+                                      >
+                                        <IconEdit />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className="dash-row-btn is-danger"
+                                        onClick={() => handleExcluir(a)}
+                                        aria-label={`Excluir ${a.nome}`}
+                                        title="Excluir"
+                                      >
+                                        <IconTrash />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    )}
+                  </section>
+                )}
               </>
             )}
 
@@ -2020,12 +2149,7 @@ export default function Dashboard() {
                     <button
                       type="button"
                       className="dash-btn dash-btn-danger"
-                      onClick={() => {
-                        if (confirm('Apagar TODOS os animais? Esta ação não pode ser desfeita.')) {
-                          importar([]);
-                          push('Rebanho zerado', 'info');
-                        }
-                      }}
+                      onClick={zerarRebanho}
                     >
                       Zerar rebanho
                     </button>
