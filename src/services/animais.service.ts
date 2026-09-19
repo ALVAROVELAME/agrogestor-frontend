@@ -1,20 +1,33 @@
 import { api } from './api';
 import type { Animal } from '../types';
 
-// Mapeia a categoria da API (enum) <-> UI (string amigável)
-const mapCategoriaParaApi = (c: string) =>
-  c.toUpperCase().replace(' ', '_');
-
-const mapCategoriaDaApi = (c: string) => {
-  const map: Record<string, Animal['categoria']> = {
-    BEZERRA: 'Bezerra',
-    NOVILHA: 'Novilha',
-    VACA_EM_LACTACAO: 'Vaca em Lactação',
-    VACA_SECA: 'Vaca Seca',
-  };
-  return map[c] ?? 'Vaca em Lactação';
+// ============================================================
+// Mapeamento explícito UI <-> API
+// (evita bugs com acento, espaço e case — ex.: "Vaca em Lactação")
+// ============================================================
+const CATEGORIA_PARA_API: Record<Animal['categoria'], string> = {
+  'Bezerra': 'BEZERRA',
+  'Novilha': 'NOVILHA',
+  'Vaca em Lactação': 'VACA_EM_LACTACAO',
+  'Vaca Seca': 'VACA_SECA',
 };
 
+const CATEGORIA_DA_API: Record<string, Animal['categoria']> = {
+  BEZERRA: 'Bezerra',
+  NOVILHA: 'Novilha',
+  VACA_EM_LACTACAO: 'Vaca em Lactação',
+  VACA_SECA: 'Vaca Seca',
+};
+
+const mapCategoriaParaApi = (c: Animal['categoria']): string =>
+  CATEGORIA_PARA_API[c] ?? c.toUpperCase();
+
+const mapCategoriaDaApi = (c: string): Animal['categoria'] =>
+  CATEGORIA_DA_API[c] ?? 'Vaca em Lactação';
+
+// ============================================================
+// Service
+// ============================================================
 export const animaisService = {
   async listar(): Promise<Animal[]> {
     const { data } = await api.get<any[]>('/api/animais');
