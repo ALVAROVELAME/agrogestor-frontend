@@ -8,6 +8,9 @@ import {
 } from 'react';
 import AnimalForm from '../components/AnimalForm';
 import { KpiCard, VisaoGeral } from '../components/dashboard/VisaoGeral';
+import PreviaGestao, { type SecaoGestao } from '../components/dashboard/PreviaGestao';
+import Relatorios from '../components/dashboard/Relatorios';
+import { calcularEstatisticas, formatarLitros } from '../components/dashboard/metricas';
 import LogoutButton from '../components/auth/LogoutButton';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/auth.service';
@@ -17,7 +20,7 @@ import type { Animal } from '../types';
 const STORAGE_KEY = 'agrogestor:animais';
 const THEME_KEY = 'agrogestor:tema';
 
-type Aba = 'visao' | 'rebanho' | 'relatorios' | 'config';
+type Aba = 'visao' | 'rebanho' | 'relatorios' | 'config' | SecaoGestao;
 type Tema = 'claro' | 'escuro';
 type Toast = { id: string; texto: string; tipo: 'sucesso' | 'erro' | 'info' };
 
@@ -206,7 +209,7 @@ export default function Dashboard() {
   const handleExcluir = useCallback(
     async (animal: Animal) => {
       const ok = window.confirm(
-        `Excluir "${animal.nome}" (brinco ${animal.brinco})? Esta ação não pode ser desfeita.`
+        `Excluir "${animal.nome}" (brinco ${animal.brinco})? As ordenhas, tarefas e eventos vinculados também serão excluídos. Esta ação não pode ser desfeita.`
       );
       if (!ok) return;
       try {
@@ -259,7 +262,7 @@ export default function Dashboard() {
   );
 
   const zerarRebanho = useCallback(async () => {
-    if (!confirm('Apagar TODOS os animais? Esta ação não pode ser desfeita.')) return;
+    if (!confirm('Apagar TODOS os animais? As ordenhas, tarefas e eventos vinculados também serão excluídos. Esta ação não pode ser desfeita.')) return;
     try {
       for (const a of animais) {
         if (a.id !== undefined && a.id !== null) {
@@ -311,28 +314,17 @@ export default function Dashboard() {
     });
   }, [animais, buscaDeferred, categoriaFiltro]);
 
-  const stats = useMemo(() => {
-    const total = animais.length;
-    const producaoTotal = animais.reduce((acc, a) => acc + (a.producaoDiaria || 0), 0);
-    const media = total > 0 ? producaoTotal / total : 0;
-    const maior = animais.reduce<Animal | null>(
-      (m, a) => (!m || a.producaoDiaria > m.producaoDiaria ? a : m), null);
-    const menor = animais.reduce<Animal | null>(
-      (m, a) => (!m || a.producaoDiaria < m.producaoDiaria ? a : m), null);
-    const porCategoria = animais.reduce<Record<string, number>>((acc, a) => {
-      acc[a.categoria] = (acc[a.categoria] || 0) + 1;
-      return acc;
-    }, {});
-    const top5 = [...animais].sort((a, b) => b.producaoDiaria - a.producaoDiaria).slice(0, 5);
-    const maxProd = top5[0]?.producaoDiaria ?? 1;
-    return { total, producaoTotal, media, maior, menor, porCategoria, top5, maxProd };
-  }, [animais]);
+  const stats = useMemo(() => calcularEstatisticas(animais), [animais]);
 
   const paletaItens = useMemo(() => {
     const q = normalizar(buscaPaleta.trim());
     const comandos = [
       { id: 'go-visao', icon: '📊', titulo: 'Ir para Visão Geral', sub: 'Dashboard', run: () => setAba('visao') },
       { id: 'go-rebanho', icon: '🐮', titulo: 'Ir para Rebanho', sub: 'Lista de animais', run: () => setAba('rebanho') },
+      { id: 'go-producao', icon: '🥛', titulo: 'Ir para Produção', sub: 'Registros de ordenha', run: () => setAba('producao') },
+      { id: 'go-agenda', icon: '📅', titulo: 'Ir para Agenda', sub: 'Tarefas', run: () => setAba('agenda') },
+      { id: 'go-eventos', icon: '🩺', titulo: 'Ir para Saúde e reprodução', sub: 'Eventos do rebanho', run: () => setAba('eventos') },
+      { id: 'go-financeiro', icon: '💰', titulo: 'Ir para Financeiro', sub: 'Receitas e despesas', run: () => setAba('financeiro') },
       { id: 'go-relatorios', icon: '📈', titulo: 'Ir para Relatórios', sub: 'Tabela detalhada', run: () => setAba('relatorios') },
       { id: 'go-config', icon: '⚙️', titulo: 'Ir para Configurações', sub: 'Preferências', run: () => setAba('config') },
       { id: 'export', icon: '⬇️', titulo: 'Exportar backup', sub: 'Baixar JSON', run: exportarJSON },
@@ -387,6 +379,24 @@ export default function Dashboard() {
   };
 
   const filtrosAtivos = busca !== '' || categoriaFiltro !== 'Todas';
+  const gruposNavegacao: { titulo: string; itens: { id: Aba; icone: string; texto: string; badge?: number | string }[] }[] = [
+    { titulo: 'Principal', itens: [
+      { id: 'visao', icone: '📊', texto: 'Visão Geral' },
+      { id: 'rebanho', icone: '🐮', texto: 'Rebanho', badge: animais.length || undefined },
+    ] },
+    { titulo: 'Gestão', itens: [
+      { id: 'producao', icone: '🥛', texto: 'Produção' },
+      { id: 'agenda', icone: '📅', texto: 'Agenda' },
+      { id: 'eventos', icone: '🩺', texto: 'Saúde e reprodução' },
+      { id: 'financeiro', icone: '💰', texto: 'Financeiro' },
+    ] },
+    { titulo: 'Análise e conta', itens: [
+      { id: 'relatorios', icone: '📈', texto: 'Relatórios' },
+      { id: 'config', icone: '⚙️', texto: 'Configurações' },
+    ] },
+  ];
+  const secaoGestao: SecaoGestao | null = aba === 'producao' || aba === 'agenda' || aba === 'eventos' || aba === 'financeiro' || aba === 'ficha' ? aba : null;
+  const titulos: Record<Aba, string> = { visao: 'Visão Geral', rebanho: 'Rebanho', ficha: 'Ficha do animal', producao: 'Produção', agenda: 'Agenda', eventos: 'Saúde e reprodução', financeiro: 'Financeiro', relatorios: 'Relatórios', config: 'Configurações' };
 
   return (
     <>
@@ -400,28 +410,16 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <span className="dash-nav-label">Navegação</span>
-          <nav className="dash-nav">
-            {(
-              [
-                ['visao', '📊', 'Visão Geral', null],
-                ['rebanho', '🐮', 'Rebanho', animais.length || null],
-                ['relatorios', '📈', 'Relatórios', null],
-                ['config', '⚙️', 'Configurações', null],
-              ] as const
-            ).map(([id, icon, label, badge]) => (
-              <button
-                key={id}
-                type="button"
-                className={`dash-nav-btn${aba === id ? ' is-active' : ''}`}
-                onClick={() => setAba(id)}
-                aria-current={aba === id ? 'page' : undefined}
-              >
-                <span className="dash-nav-icon" aria-hidden="true">{icon}</span>
-                <span>{label}</span>
+          <nav className="dash-nav" aria-label="Áreas do aplicativo">
+            {gruposNavegacao.map(grupo => <div key={grupo.titulo}>
+              <div className="dash-nav-label">{grupo.titulo}</div>
+              {grupo.itens.map(({ id, icone, texto, badge }) => <button key={id} type="button"
+                className={`dash-nav-btn${aba === id || (aba === 'ficha' && id === 'rebanho') ? ' is-active' : ''}`}
+                onClick={() => setAba(id)} aria-current={aba === id || (aba === 'ficha' && id === 'rebanho') ? 'page' : undefined}>
+                <span className="dash-nav-icon" aria-hidden="true">{icone}</span><span>{texto}</span>
                 {badge ? <span className="dash-nav-badge">{badge}</span> : null}
-              </button>
-            ))}
+              </button>)}
+            </div>)}
           </nav>
 
           <div className="dash-sidebar-footer">
@@ -455,10 +453,7 @@ export default function Dashboard() {
               </button>
               <div style={{ minWidth: 0 }}>
                 <h1 className="dash-title">
-                  {aba === 'visao' && 'Visão Geral'}
-                  {aba === 'rebanho' && 'Rebanho'}
-                  {aba === 'relatorios' && 'Relatórios'}
-                  {aba === 'config' && 'Configurações'}
+                  {titulos[aba]}
                 </h1>
                 <p className="dash-subtitle">
                   {formatarData()} · {animais.length} {animais.length === 1 ? 'animal' : 'animais'}
@@ -538,12 +533,14 @@ export default function Dashboard() {
           <div className="dash-content">
             {aba === 'visao' && <VisaoGeral stats={stats} />}
 
+            {secaoGestao && <PreviaGestao key={secaoGestao} secao={secaoGestao} animais={animais} />}
+
             {aba === 'rebanho' && (
               <>
                 <section className="dash-kpis" aria-label="Resumo do rebanho">
                   <KpiCard icon="🐮" label="Total de animais" value={stats.total} />
-                  <KpiCard icon="🥛" label="Produção total" value={`${stats.producaoTotal.toFixed(1)} L`} />
-                  <KpiCard icon="📊" label="Média por animal" value={`${stats.media.toFixed(2)} L`} />
+                  <KpiCard icon="🥛" label="Produção cadastrada em lactação" value={formatarLitros(stats.producaoTotal)} />
+                  <KpiCard icon="📊" label="Média por vaca em lactação" value={stats.media === null ? '—' : formatarLitros(stats.media)} />
                   <KpiCard
                     icon="🏆"
                     label="Maior produtor"
@@ -602,6 +599,9 @@ export default function Dashboard() {
                         {animaisFiltrados.length} de {animais.length}
                         {animaisFiltrados.length === 1 ? ' animal' : ' animais'}
                       </span>
+                      <button type="button" className="dash-btn dash-btn-ghost" onClick={() => setAba('ficha')}>
+                        Ver ficha do animal
+                      </button>
                     </div>
 
                     <div className="dash-filters" role="search" aria-label="Filtros de animais" style={{ marginBottom: 16 }}>
@@ -730,68 +730,7 @@ export default function Dashboard() {
               </>
             )}
 
-            {aba === 'relatorios' && (
-              <>
-                <section className="dash-kpis" aria-label="Resumo">
-                  <KpiCard icon="🥛" label="Produção total" value={`${stats.producaoTotal.toFixed(1)} L`} />
-                  <KpiCard icon="📊" label="Média geral" value={`${stats.media.toFixed(2)} L`} />
-                  <KpiCard icon="🏆" label="Maior produtor" value={stats.maior ? stats.maior.nome : '—'} />
-                  <KpiCard icon="📉" label="Menor produtor" value={stats.menor ? stats.menor.nome : '—'} />
-                </section>
-
-                <section className="dash-panel" aria-labelledby="rel-title">
-                  <div className="dash-panel-head">
-                    <h2 id="rel-title" className="dash-panel-title">Relatório detalhado</h2>
-                    <button
-                      type="button"
-                      className="dash-btn dash-btn-ghost"
-                      onClick={() => window.print()}
-                    >
-                      🖨️ Imprimir
-                    </button>
-                  </div>
-
-                  <p className="dash-table-hint" aria-hidden="true">
-                    <span>↔</span> Arraste para o lado para ver todas as colunas
-                  </p>
-
-                  <div className="dash-table-wrap" role="region" aria-label="Tabela de animais" tabIndex={0}>
-                    <table className="dash-table">
-                      <caption className="sr-only">
-                        Relatório detalhado de animais
-                      </caption>
-                      <thead>
-                        <tr>
-                          <th scope="col">Brinco</th>
-                          <th scope="col">Nome</th>
-                          <th scope="col">Categoria</th>
-                          <th scope="col" className="num">Produção</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {animais.map((a) => (
-                          <tr key={String(a.id)}>
-                            <td className="brinco-cell">{a.brinco}</td>
-                            <td>{a.nome}</td>
-                            <td>
-                              <span className="dash-cat-badge">{a.categoria}</span>
-                            </td>
-                            <td className="num">{a.producaoDiaria} L</td>
-                          </tr>
-                        ))}
-                        {animais.length === 0 && (
-                          <tr>
-                            <td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)' }}>
-                              Sem dados para exibir.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
-              </>
-            )}
+            {aba === 'relatorios' && <Relatorios animais={animais} />}
 
             {aba === 'config' && (
               <>
@@ -906,27 +845,16 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <span className="dash-nav-label">Navegação</span>
-              <nav className="dash-nav">
-                {(
-                  [
-                    ['visao', '📊', 'Visão Geral', null],
-                    ['rebanho', '🐮', 'Rebanho', animais.length || null],
-                    ['relatorios', '📈', 'Relatórios', null],
-                    ['config', '⚙️', 'Configurações', null],
-                  ] as const
-                ).map(([id, icon, label, badge]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`dash-nav-btn${aba === id ? ' is-active' : ''}`}
-                    onClick={() => navegarPara(id)}
-                  >
-                    <span className="dash-nav-icon" aria-hidden="true">{icon}</span>
-                    <span>{label}</span>
+              <nav className="dash-nav" aria-label="Áreas do aplicativo">
+                {gruposNavegacao.map(grupo => <div key={grupo.titulo}>
+                  <div className="dash-nav-label">{grupo.titulo}</div>
+                  {grupo.itens.map(({ id, icone, texto, badge }) => <button key={id} type="button"
+                    className={`dash-nav-btn${aba === id || (aba === 'ficha' && id === 'rebanho') ? ' is-active' : ''}`}
+                    onClick={() => navegarPara(id)} aria-current={aba === id || (aba === 'ficha' && id === 'rebanho') ? 'page' : undefined}>
+                    <span className="dash-nav-icon" aria-hidden="true">{icone}</span><span>{texto}</span>
                     {badge ? <span className="dash-nav-badge">{badge}</span> : null}
-                  </button>
-                ))}
+                  </button>)}
+                </div>)}
               </nav>
 
               <div className="dash-sidebar-footer">

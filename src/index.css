@@ -1,3 +1,4 @@
+@layer theme, base, components, utilities;
 @import "tailwindcss/theme.css";
 @import "tailwindcss/utilities.css";
 
@@ -6,6 +7,7 @@
    ============================================================ */
 
 /* ---------- Reset ---------- */
+@layer base {
 *, *::before, *::after {
   box-sizing: border-box;
   margin: 0;
@@ -30,6 +32,7 @@ img, svg { display: block; max-width: 100%; }
 button, input, select, textarea { font: inherit; color: inherit; }
 a { color: inherit; text-decoration: none; }
 button { cursor: pointer; border: none; background: none; }
+}
 
 /* ---------- Tokens (Light) ---------- */
 :root {
@@ -3010,9 +3013,8 @@ button { cursor: pointer; border: none; background: none; }
 }
 
 .dash *, .dash *::before, .dash *::after { box-sizing: border-box; }
-.dash h1, .dash h2, .dash h3 { margin: 0; letter-spacing: -.02em; }
-.dash p { margin: 0; }
-.dash button, .dash input, .dash select, .dash textarea { font-family: inherit; color: inherit; }
+.dash h1, .dash h2, .dash h3 { letter-spacing: -.02em; }
+.dash button, .dash input, .dash select, .dash textarea { font-family: inherit; }
 .dash a { color: inherit; text-decoration: none; }
 
 .dash :focus-visible {
