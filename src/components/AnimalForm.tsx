@@ -34,7 +34,10 @@ const FORM_VAZIO: FormAnimal = {
 };
 
 export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Props) {
-  const [form, setForm] = useState<FormAnimal>(FORM_VAZIO);
+  const [form, setForm] = useState<FormAnimal>(() => animalEditando ? {
+    brinco: animalEditando.brinco, nome: animalEditando.nome,
+    categoria: animalEditando.categoria, producaoDiaria: animalEditando.producaoDiaria,
+  } : FORM_VAZIO);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [submetido, setSubmetido] = useState(false);
 
@@ -42,19 +45,7 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
 
   // Sincroniza com o animal em edição e foca no primeiro campo
   useEffect(() => {
-    if (animalEditando) {
-      setForm({
-        brinco: animalEditando.brinco,
-        nome: animalEditando.nome,
-        categoria: animalEditando.categoria,
-        producaoDiaria: animalEditando.producaoDiaria,
-      });
-      setTouched({});
-      setSubmetido(false);
-      brincoRef.current?.focus();
-    } else {
-      setForm(FORM_VAZIO);
-    }
+    if (animalEditando) brincoRef.current?.focus();
   }, [animalEditando]);
 
   // ---------- Validação ----------
@@ -112,12 +103,12 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
     brincoRef.current?.focus();
   };
 
-  const handleCancelar = () => {
+  const handleCancelar = useCallback(() => {
     setForm(FORM_VAZIO);
     setTouched({});
     setSubmetido(false);
     onCancelar();
-  };
+  }, [onCancelar]);
 
   // Atalho: Esc cancela a edição
   useEffect(() => {
@@ -127,19 +118,19 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [animalEditando]);
+  }, [animalEditando, handleCancelar]);
 
   return (
-    <form onSubmit={handleSubmit} className="af-form" noValidate>
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
       {animalEditando && (
         <div className="af-badge">
           Editando: <strong>{animalEditando.nome}</strong> ({animalEditando.brinco})
         </div>
       )}
 
-      <div className="af-grid">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-[14px]">
         {/* Brinco */}
-        <div className="af-field">
+        <div className="flex flex-col gap-1.5">
           <label htmlFor="brinco" className="af-label">
             Brinco *
             <span className="af-counter">
@@ -165,7 +156,7 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
         </div>
 
         {/* Nome */}
-        <div className="af-field">
+        <div className="flex flex-col gap-1.5">
           <label htmlFor="nome" className="af-label">
             Nome *
             <span className="af-counter">
@@ -190,7 +181,7 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
         </div>
 
         {/* Categoria */}
-        <div className="af-field">
+        <div className="flex flex-col gap-1.5">
           <label htmlFor="categoria" className="af-label">
             Categoria
           </label>
@@ -211,7 +202,7 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
         </div>
 
         {/* Produção */}
-        <div className="af-field">
+        <div className="flex flex-col gap-1.5">
           <label htmlFor="producaoDiaria" className="af-label">
             Produção Diária (L)
           </label>
@@ -241,7 +232,7 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
         </div>
       </div>
 
-      <div className="af-actions">
+      <div className="flex flex-wrap gap-2.5 pt-1.5">
         <button
           type="submit"
           disabled={formInvalido && submetido}
@@ -267,194 +258,6 @@ export default function AnimalForm({ animalEditando, onSalvar, onCancelar }: Pro
         </p>
       )}
 
-      {/* ============================================================
-          CSS escopado — usa as variáveis do Dashboard (--surface, --ink, etc.)
-          ============================================================ */}
-      <style>{`
-        .af-form {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
-        }
-        .af-badge {
-          display: inline-flex;
-          align-items: center;
-          gap: 4px;
-          padding: 6px 12px;
-          background: var(--brand-soft, #dcf5e3);
-          color: var(--brand, #14532d);
-          border: 1px solid var(--border, #d8e2dc);
-          border-radius: 999px;
-          font-size: 12.5px;
-          font-weight: 500;
-          width: fit-content;
-        }
-        .af-badge strong {
-          font-weight: 700;
-          color: inherit;
-        }
-
-        .af-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-          gap: 14px;
-        }
-
-        .af-field {
-          display: flex;
-          flex-direction: column;
-          gap: 6px;
-        }
-
-        .af-label {
-          font-size: 12.5px;
-          font-weight: 700;
-          color: var(--ink-soft, #2a4033);
-          letter-spacing: .02em;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .af-counter {
-          font-size: 11.5px;
-          color: var(--muted, #3f5a48);
-          font-weight: 500;
-          font-variant-numeric: tabular-nums;
-        }
-
-        .af-input,
-        .af-select {
-          width: 100%;
-          padding: 10px 14px;
-          font-size: 14px;
-          font-family: inherit;
-          color: var(--ink, #0a1810);
-          background: var(--surface, #fff);
-          border: 1.5px solid var(--border, #d8e2dc);
-          border-radius: 10px;
-          transition: border-color .15s, box-shadow .15s;
-          outline: none;
-        }
-        .af-input::placeholder {
-          color: var(--muted, #3f5a48);
-          opacity: 1;
-        }
-        .af-input:hover,
-        .af-select:hover {
-          border-color: var(--border-strong, #b0c3b8);
-        }
-        .af-input:focus,
-        .af-select:focus {
-          outline: none;
-          border-color: var(--brand, #14532d);
-          box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-2, #16a34a) 22%, transparent);
-        }
-        .af-input.is-error,
-        .af-select.is-error {
-          border-color: var(--danger, #991b1b);
-        }
-        .af-input.is-error:focus {
-          box-shadow: 0 0 0 4px color-mix(in srgb, var(--danger, #991b1b) 18%, transparent);
-        }
-        .af-select {
-          cursor: pointer;
-        }
-
-        .af-error {
-          font-size: 12px;
-          color: var(--danger, #991b1b);
-          font-weight: 600;
-          display: flex;
-          align-items: center;
-          gap: 6px;
-        }
-        .af-error::before {
-          content: "";
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          background: currentColor;
-          flex-shrink: 0;
-        }
-
-        .af-actions {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          padding-top: 6px;
-        }
-
-        .af-btn {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          padding: 10px 18px;
-          border-radius: 10px;
-          font-size: 13.5px;
-          font-weight: 600;
-          font-family: inherit;
-          cursor: pointer;
-          border: 1.5px solid transparent;
-          transition: transform .12s, background .15s, border-color .15s, box-shadow .15s, color .15s;
-          white-space: nowrap;
-        }
-        .af-btn--primary {
-          background: var(--brand, #14532d);
-          color: var(--brand-ink, #fff);
-          box-shadow: 0 6px 16px -8px rgba(20,83,45,.5);
-        }
-        .af-btn--primary:hover:not(:disabled) {
-          transform: translateY(-1px);
-          background: var(--brand-3, #052e16);
-          color: var(--brand-ink, #fff);
-        }
-        [data-theme="escuro"] .af-btn--primary:hover:not(:disabled) {
-          background: #86efac;
-          color: #052e16;
-        }
-        .af-btn--ghost {
-          background: transparent;
-          color: var(--brand, #14532d);
-          border-color: var(--border, #d8e2dc);
-        }
-        .af-btn--ghost:hover:not(:disabled) {
-          background: var(--brand-soft, #dcf5e3);
-          border-color: var(--brand, #14532d);
-        }
-        [data-theme="escuro"] .af-btn--ghost {
-          color: var(--brand-3, #a7f3b8);
-        }
-        [data-theme="escuro"] .af-btn--ghost:hover:not(:disabled) {
-          color: var(--brand-3, #a7f3b8);
-        }
-        .af-btn:disabled {
-          opacity: .55;
-          cursor: not-allowed;
-          transform: none;
-          box-shadow: none;
-        }
-
-        .af-kbd {
-          display: inline-flex;
-          align-items: center;
-          padding: 1px 6px;
-          border-radius: 4px;
-          font-size: 11px;
-          font-weight: 700;
-          font-family: inherit;
-          background: var(--surface-2, #f2f6f4);
-          border: 1px solid var(--border, #d8e2dc);
-          color: var(--ink-soft, #2a4033);
-        }
-
-        .af-hint {
-          margin: 0;
-          font-size: 12.5px;
-          color: var(--muted, #3f5a48);
-          line-height: 1.5;
-        }
-      `}</style>
     </form>
   );
 }

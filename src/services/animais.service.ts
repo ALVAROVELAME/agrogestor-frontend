@@ -1,5 +1,6 @@
 import { api } from './api';
 import type { Animal } from '../types';
+type AnimalApi = Omit<Animal, 'categoria'> & { categoria: string };
 
 // ============================================================
 // Mapeamento explícito UI <-> API
@@ -30,7 +31,7 @@ const mapCategoriaDaApi = (c: string): Animal['categoria'] =>
 // ============================================================
 export const animaisService = {
   async listar(): Promise<Animal[]> {
-    const { data } = await api.get<any[]>('/api/animais');
+    const { data } = await api.get<AnimalApi[]>('/api/animais');
     return data.map((a) => ({
       id: a.id,
       brinco: a.brinco,
@@ -41,7 +42,7 @@ export const animaisService = {
   },
 
   async criar(animal: Omit<Animal, 'id'>): Promise<Animal> {
-    const { data } = await api.post<any>('/api/animais', {
+    const { data } = await api.post<AnimalApi>('/api/animais', {
       brinco: animal.brinco,
       nome: animal.nome,
       categoria: mapCategoriaParaApi(animal.categoria),
@@ -57,7 +58,7 @@ export const animaisService = {
   },
 
   async atualizar(animal: Animal): Promise<Animal> {
-    const { data } = await api.put<any>(`/api/animais/${animal.id}`, {
+    const { data } = await api.put<AnimalApi>(`/api/animais/${animal.id}`, {
       brinco: animal.brinco,
       nome: animal.nome,
       categoria: mapCategoriaParaApi(animal.categoria),

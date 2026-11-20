@@ -74,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// Context and provider share a module to keep the public auth API stable.
+// eslint-disable-next-line react-refresh/only-export-components
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth deve ser usado dentro de <AuthProvider>');

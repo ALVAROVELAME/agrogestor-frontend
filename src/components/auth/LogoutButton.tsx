@@ -1,19 +1,21 @@
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../../contexts/AuthContext';
 import type { CSSProperties } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 interface Props {
   estilo?: CSSProperties;
   confirmar?: boolean;
-  /** Pra onde redirecionar após logout. Default: '/' (landing) */
+  /** Para onde redirecionar após logout. */
   redirecionarPara?: string;
 }
 
 export default function LogoutButton({
   estilo,
   confirmar = true,
-  redirecionarPara = '/',
+  redirecionarPara = '/login',
 }: Props) {
   const { logout } = useAuth();
+  const navigate = useNavigate();
 
   const handleLogout = () => {
     if (confirmar && !window.confirm('Deseja realmente sair?')) return;
@@ -21,9 +23,7 @@ export default function LogoutButton({
     // 1. Limpa o token/usuário do localStorage + state
     logout();
 
-    // 2. Force reload completo — garante que o AuthContext
-    //    remonta SEM token, evitando race condition
-    window.location.href = redirecionarPara;
+    navigate(redirecionarPara, { replace: true });
   };
 
   return (

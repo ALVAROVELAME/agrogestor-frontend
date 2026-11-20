@@ -31,11 +31,14 @@ api.interceptors.response.use(
     const status = error?.response?.status;
     const url: string = error?.config?.url ?? '';
 
-    // Não redireciona se o próprio login falhou (401 esperado)
-    const isLoginRequest = url.includes('/api/auth/login');
-    const jaEstouNoLogin = window.location.pathname.startsWith('/login');
+    // Somente uma requisição da sessão atual na área protegida deve expulsar o usuário.
+    // Na página inicial, a validação de /me é tratada pelo AuthProvider.
+    const token = localStorage.getItem('token');
+    const authorization = error?.config?.headers?.Authorization;
+    const isDashboard = window.location.pathname === '/dashboard' || window.location.pathname.startsWith('/dashboard/');
+    const isPublicAuth = url.includes('/api/auth/login') || url.includes('/api/auth/confirmar');
 
-    if (status === 401 && !isLoginRequest && !jaEstouNoLogin) {
+    if (status === 401 && isDashboard && !isPublicAuth && token && authorization === `Bearer ${token}`) {
       localStorage.removeItem('token');
       localStorage.removeItem('usuario');
       window.location.href = '/login';

@@ -1,0 +1,257 @@
+import { useState } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { api } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext';
+
+interface LoginResposta {
+  sucesso: boolean;
+  mensagem: string;
+  token: string;
+  usuario?: {
+    id: number;
+    nome: string;
+    email: string;
+    ativo: boolean;
+  };
+}
+
+/* ============================================================
+   CSS do componente
+   ============================================================ */
+
+/* ============================================================
+   Componente
+   ============================================================ */
+export default function Login() {
+  const [email, setEmail] = useState('');
+  const [senha, setSenha] = useState('');
+  const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { login } = useAuth();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErro(null);
+    setCarregando(true);
+
+    try {
+      const { data } = await api.post<LoginResposta>('/api/auth/login', {
+        email,
+        senha,
+      });
+
+      if (!data.token || !data.usuario) {
+        throw new Error('Resposta inválida do servidor.');
+      }
+
+      login(data.usuario, data.token);
+
+      const from = (location.state as { from?: { pathname: string } })?.from?.pathname;
+      navigate(from || '/dashboard', { replace: true });
+    } catch (err: unknown) {
+      const apiErr = err as { response?: { data?: { mensagem?: string } } };
+      setErro(
+        apiErr?.response?.data?.mensagem ||
+          'Credenciais inválidas ou e-mail não confirmado.'
+      );
+    } finally {
+      setCarregando(false);
+    }
+  };
+
+  return (
+    <>
+      <div className="lg">
+        <a href="#lg-main" className="lg-skip">Ir para o formulário</a>
+
+        <div className="lg-wrap">
+          {/* ============ PAINEL ESQUERDO — BRANDING ============ */}
+          <aside className="lg-brand" aria-label="Sobre o AgroGestor">
+            <div className="lg-brand-top">
+              <Link to="/" className="lg-brand-logo" aria-label="AgroGestor — início">
+                <img className="lg-brand-logo-mark" src="/logo.svg" alt="" />
+                <span>AgroGestor</span>
+              </Link>
+
+              <span className="lg-brand-badge">
+                <span className="lg-brand-badge-dot" aria-hidden="true" />
+                Plataforma 2.0
+              </span>
+
+              <h2 className="lg-brand-title">
+                Gestão inteligente do <em>seu rebanho</em>.
+              </h2>
+              <p className="lg-brand-sub">
+                Controle produção, categorias e relatórios em um só lugar.
+                Simples como deve ser.
+              </p>
+
+              <ul className="lg-brand-list">
+                {[
+                  'Dashboard em tempo real',
+                  'Backup automático na nuvem',
+                  'Relatórios prontos em um clique',
+                ].map((item) => (
+                  <li key={item} className="lg-brand-item">
+                    <span className="lg-brand-check" aria-hidden="true">✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="lg-brand-footer">
+              <span>© {new Date().getFullYear()} AgroGestor</span>
+              <span className="lg-brand-footer-dot" aria-hidden="true" />
+              <span>Feito no Brasil 🇧🇷</span>
+            </div>
+          </aside>
+
+          {/* ============ PAINEL DIREITO — FORMULÁRIO ============ */}
+          <main className="lg-form-side" id="lg-main">
+            <div className="lg-card">
+              <h1 className="lg-title">Bem-vindo de volta</h1>
+              <p className="lg-sub">Entre com suas credenciais para continuar.</p>
+
+              {erro && (
+                <div
+                  className="lg-alert"
+                  role="alert"
+                  aria-live="polite"
+                  id="lg-erro"
+                >
+                  <span className="lg-alert-icon" aria-hidden="true">!</span>
+                  <span>{erro}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleLogin} className="lg-form" noValidate>
+                <div className="lg-field">
+                  <label htmlFor="email" className="lg-label">E-mail</label>
+                  <div className="lg-input-wrap">
+                    <input
+                      id="email"
+                      type="email"
+                      placeholder="seu@email.com"
+                      value={email}
+                      onChange={(e) => { setEmail(e.target.value); setErro(null); }}
+                      required
+                      autoComplete="email"
+                      autoFocus
+                      className={`lg-input${erro ? ' has-error' : ''}`}
+                      aria-invalid={!!erro}
+                      aria-describedby={erro ? 'lg-erro' : undefined}
+                      disabled={carregando}
+                      spellCheck={false}
+                    />
+                  </div>
+                </div>
+
+                <div className="lg-field">
+                  <div className="lg-label-row">
+                    <label htmlFor="senha" className="lg-label">Senha</label>
+                    <Link to="/forgot-password" className="lg-forgot">
+                      Esqueci minha senha
+                    </Link>
+                  </div>
+                  <div className="lg-input-wrap">
+                    <input
+                      id="senha"
+                      type={mostrarSenha ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={senha}
+                      onChange={(e) => { setSenha(e.target.value); setErro(null); }}
+                      required
+                      autoComplete="current-password"
+                      className={`lg-input${erro ? ' has-error' : ''}`}
+                      aria-invalid={!!erro}
+                      aria-describedby={erro ? 'lg-erro' : undefined}
+                      disabled={carregando}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setMostrarSenha((v) => !v)}
+                      className="lg-input-icon"
+                      aria-label={mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'}
+                      aria-pressed={mostrarSenha}
+                    >
+                      {mostrarSenha ? (
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
+                          <line x1="1" y1="1" x2="23" y2="23" />
+                        </svg>
+                      ) : (
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
+                          <circle cx="12" cy="12" r="3" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  className="lg-btn-primary"
+                  disabled={carregando}
+                  aria-busy={carregando}
+                >
+                  {carregando ? (
+                    <>
+                      <span className="lg-spinner" aria-hidden="true" />
+                      Entrando…
+                    </>
+                  ) : (
+                    <>
+                      Entrar
+                      <span aria-hidden="true">→</span>
+                    </>
+                  )}
+                </button>
+              </form>
+
+              <div className="lg-divider" aria-hidden="true">ou</div>
+
+              <p className="lg-footer-text">
+                Não tem conta?
+                <Link to="/signup">Criar conta grátis</Link>
+              </p>
+
+              <p className="lg-legal">
+                Ao continuar, você concorda com os{' '}
+                <Link to="/termos" style={{ color: 'var(--brand)', fontWeight: 600 }}>
+                  Termos
+                </Link>{' '}
+                e a{' '}
+                <Link to="/privacidade" style={{ color: 'var(--brand)', fontWeight: 600 }}>
+                  Política de Privacidade
+                </Link>
+                .
+              </p>
+            </div>
+          </main>
+        </div>
+      </div>
+    </>
+  );
+}

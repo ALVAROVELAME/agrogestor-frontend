@@ -110,25 +110,23 @@ Produtores rurais perdem horas anotando produção em cadernos ou planilhas disp
 agrogestor-frontend/
 ├── public/                    # Assets estáticos
 ├── src/
-│   ├── assets/                # Imagens, ícones
 │   ├── components/            # Componentes reutilizáveis
+│   │   ├── auth/              # Proteção de rotas e saída da conta
+│   │   │   ├── LogoutButton.tsx
+│   │   │   ├── RotaProtegida.tsx
+│   │   │   └── RotaPublica.tsx
 │   │   ├── AnimalForm.tsx
-│   │   ├── AnimalList.tsx
-│   │   ├── LegalLayout.tsx    # Layout dos documentos legais
-│   │   ├── LogoutButton.tsx
-│   │   ├── RotaProtegida.tsx  # Guard de rotas autenticadas
-│   │   └── RotaPublica.tsx    # Guard de rotas públicas
+│   │   └── LegalLayout.tsx    # Layout dos documentos legais
 │   ├── contexts/
 │   │   └── AuthContext.tsx    # Provider de autenticação
+│   ├── data/                  # Dados demonstrativos da landing
+│   ├── hooks/                 # Comportamentos reutilizáveis
 │   ├── pages/
+│   │   ├── auth/              # Login, cadastro e confirmação
+│   │   ├── legal/             # Termos e privacidade
 │   │   ├── Landing.tsx
-│   │   ├── Login.tsx
-│   │   ├── Signup.tsx
 │   │   ├── Dashboard.tsx      # Hub principal (4 abas)
-│   │   ├── ConfirmarEmail.tsx
-│   │   ├── Status.tsx         # StatusView + StatusPage
-│   │   ├── Termos.tsx
-│   │   └── Privacidade.tsx
+│   │   └── Status.tsx         # StatusView + StatusPage
 │   ├── services/
 │   │   ├── api.ts             # Axios + interceptors
 │   │   ├── auth.service.ts    # Login, cadastro, logout

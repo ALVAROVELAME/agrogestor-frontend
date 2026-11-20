@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api } from '../services/api';
-import { StatusView, type StatusOpcoes } from './Status';
+import { api } from '../../services/api';
+import { StatusView, type StatusOpcoes } from '../Status';
 
 /* ============================================================
    Mensagens por status HTTP
@@ -39,23 +39,7 @@ export default function ConfirmarEmail() {
   });
 
   useEffect(() => {
-    if (!token) {
-      setEstado({
-        tipo: 'erro',
-        titulo: 'Link incompleto',
-        mensagem:
-          'O link de confirmação está sem o token. Verifique o e-mail enviado e clique novamente.',
-        ctaTexto: 'Voltar ao início',
-        ctaLink: '/',
-      });
-      return;
-    }
-
-    setEstado({
-      tipo: 'carregando',
-      titulo: 'Confirmando seu e-mail…',
-      mensagem: 'Aguarde um instante enquanto ativamos sua conta.',
-    });
+    if (!token) return;
 
     const controller = new AbortController();
 
@@ -103,5 +87,6 @@ export default function ConfirmarEmail() {
     return () => controller.abort();
   }, [token, tentativa]);
 
-  return <StatusView {...estado} />;
+  if (!token) return <StatusView tipo="erro" titulo="Link incompleto" mensagem="O link de confirmação está sem o token. Verifique o e-mail enviado e clique novamente." ctaTexto="Voltar ao início" ctaLink="/" />;
+  return <StatusView key={`${estado.tipo}-${estado.autoRedirect ?? 0}`} {...estado} />;
 }

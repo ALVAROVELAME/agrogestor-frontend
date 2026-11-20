@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../services/api';
+import { api } from '../../services/api';
 
 // ============================================================
 // Regras de validação
@@ -23,554 +23,6 @@ const VALIDACOES = {
 /* ============================================================
    CSS do componente
    ============================================================ */
-const STYLES = `
-.sg {
-  --bg: #ffffff;
-  --bg-soft: #f6faf7;
-  --ink: #0b1a12;
-  --ink-soft: #3d5648;
-  --muted: #4f6a5b;
-  --line: #e6efe9;
-  --line-strong: #c9d9cd;
-  --brand: #166534;
-  --brand-2: #22c55e;
-  --brand-3: #0f4a24;
-  --danger-bg: #fef2f2;
-  --danger-ink: #991b1b;
-  --danger-line: #fecaca;
-
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  color: var(--ink);
-  background: var(--bg-soft);
-  line-height: 1.55;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-.sg *, .sg *::before, .sg *::after { box-sizing: border-box; }
-.sg h1, .sg h2, .sg h3 { margin: 0; letter-spacing: -.02em; }
-.sg p { margin: 0; }
-.sg a { color: inherit; text-decoration: none; }
-.sg button, .sg input { font-family: inherit; }
-
-/* ---------- Skip link ---------- */
-.sg-skip {
-  position: absolute; top: -100px; left: 12px; z-index: 9999;
-  padding: 12px 18px; background: var(--brand); color: #fff !important;
-  font-weight: 600; font-size: 14px;
-  border-radius: 0 0 10px 10px;
-  box-shadow: 0 10px 24px -10px rgba(0,0,0,.35);
-  transition: top .18s ease;
-}
-.sg-skip:focus { top: 0; outline: 3px solid #fff; outline-offset: 2px; }
-
-/* ---------- Foco visível ---------- */
-.sg a:focus-visible,
-.sg button:focus-visible,
-.sg input:focus-visible,
-.sg .sg-termos:focus-within {
-  outline: 3px solid var(--brand-2);
-  outline-offset: 2px;
-  border-radius: 8px;
-}
-.sg .sg-btn-primary:focus-visible {
-  outline: 3px solid #fff;
-  outline-offset: 3px;
-  box-shadow: 0 0 0 6px rgba(22,101,52,.55);
-}
-
-/* ---------- Layout base ---------- */
-.sg-wrap {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  min-height: 100vh;
-  min-height: 100dvh;
-}
-
-/* ---------- Painel esquerdo ---------- */
-.sg-brand {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(145deg, var(--brand-3) 0%, var(--brand) 55%, #1a7a3e 100%);
-  color: #fff;
-  padding: 48px 56px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 40px;
-}
-.sg-brand::before {
-  content: "";
-  position: absolute; inset: 0;
-  background:
-    radial-gradient(700px 400px at 90% 10%, rgba(34,197,94,.28), transparent 60%),
-    radial-gradient(500px 300px at 10% 90%, rgba(255,255,255,.08), transparent 60%);
-  pointer-events: none;
-}
-.sg-brand > * { position: relative; }
-
-.sg-brand-top { display: flex; flex-direction: column; }
-.sg-brand-logo {
-  display: inline-flex; align-items: center; gap: 12px;
-  color: #fff; font-weight: 700; font-size: 20px; letter-spacing: -.02em;
-  width: fit-content;
-  margin-bottom: 48px;
-}
-.sg-brand-logo-mark {
-  width: 44px; height: 44px; border-radius: 12px;
-  display: grid; place-items: center; font-size: 22px;
-  background: rgba(255,255,255,.12);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.18);
-  backdrop-filter: blur(6px);
-}
-.sg-brand-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 14px; border-radius: 999px;
-  background: rgba(255,255,255,.12);
-  border: 1px solid rgba(255,255,255,.18);
-  font-size: 12px; font-weight: 600;
-  color: #ecfdf5;
-  margin-bottom: 20px;
-  width: fit-content;
-  backdrop-filter: blur(6px);
-}
-.sg-brand-badge-dot {
-  width: 6px; height: 6px; border-radius: 50%;
-  background: #4ade80;
-  box-shadow: 0 0 0 3px rgba(74,222,128,.28);
-}
-.sg-brand-title {
-  font-size: clamp(28px, 3.4vw, 40px);
-  font-weight: 800;
-  line-height: 1.12;
-  letter-spacing: -.03em;
-  color: #ffffff;
-  margin-bottom: 18px;
-  max-width: 480px;
-}
-.sg-brand-title em {
-  font-style: normal;
-  background: linear-gradient(120deg, #bbf7d0, #4ade80);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.sg-brand-sub {
-  font-size: 16px;
-  line-height: 1.6;
-  color: #d1fae5;
-  max-width: 440px;
-  margin-bottom: 32px;
-}
-.sg-brand-list {
-  list-style: none; padding: 0; margin: 0;
-  display: flex; flex-direction: column; gap: 14px;
-}
-.sg-brand-item {
-  display: flex; align-items: center; gap: 12px;
-  font-size: 14.5px; color: #ecfdf5; font-weight: 500;
-}
-.sg-brand-check {
-  width: 22px; height: 22px; border-radius: 50%;
-  display: inline-grid; place-items: center;
-  background: rgba(74,222,128,.18);
-  border: 1px solid rgba(74,222,128,.35);
-  color: #bbf7d0;
-  font-size: 11px; font-weight: 800;
-  flex-shrink: 0;
-}
-.sg-brand-footer {
-  font-size: 12.5px; color: #a7f3d0;
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-}
-.sg-brand-footer-dot { width: 4px; height: 4px; border-radius: 50%; background: #4ade80; }
-
-/* ---------- Painel direito ---------- */
-.sg-form-side {
-  display: flex; align-items: center; justify-content: center;
-  padding: 48px 32px;
-  background:
-    radial-gradient(600px 400px at 100% 0%, rgba(34,197,94,.06), transparent 60%),
-    var(--bg-soft);
-  overflow-y: auto;
-}
-.sg-card {
-  width: 100%;
-  max-width: 440px;
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  padding: 40px 36px;
-  box-shadow:
-    0 1px 2px rgba(11,26,18,.04),
-    0 20px 50px -25px rgba(11,26,18,.22);
-}
-.sg-header { margin-bottom: 26px; }
-.sg-back {
-  display: inline-flex; align-items: center; gap: 6px;
-  font-size: 13px; font-weight: 600;
-  color: var(--muted);
-  margin-bottom: 14px;
-  transition: color .15s;
-  width: fit-content;
-}
-.sg-back:hover { color: var(--brand); }
-.sg-title {
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -.025em;
-  color: var(--ink);
-  margin-bottom: 6px;
-}
-.sg-sub {
-  font-size: 14.5px;
-  color: var(--muted);
-}
-
-/* ---------- Alerta ---------- */
-.sg-alert {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 12px 14px;
-  background: var(--danger-bg);
-  border: 1px solid var(--danger-line);
-  border-radius: 12px;
-  color: var(--danger-ink);
-  font-size: 13.5px;
-  line-height: 1.5;
-  margin-bottom: 22px;
-  animation: sgShake .35s ease;
-}
-.sg-alert-icon {
-  flex-shrink: 0;
-  width: 20px; height: 20px; border-radius: 50%;
-  display: inline-grid; place-items: center;
-  background: #fee2e2; color: var(--danger-ink);
-  font-size: 12px; font-weight: 800;
-}
-@keyframes sgShake {
-  0%,100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
-}
-
-/* ---------- Form ---------- */
-.sg-form { display: flex; flex-direction: column; gap: 16px; }
-.sg-field { display: flex; flex-direction: column; gap: 8px; }
-.sg-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ink);
-}
-.sg-input-wrap { position: relative; }
-.sg-input {
-  width: 100%;
-  padding: 13px 14px;
-  font-size: 16px;
-  color: var(--ink);
-  background: #fff;
-  border: 1.5px solid var(--line-strong);
-  border-radius: 12px;
-  transition: border-color .15s, box-shadow .15s, background .15s;
-}
-.sg-input--with-icon {
-  padding-right: 52px; /* espaço para o ícone do olho */
-}
-
-/* Esconde o botão nativo de revelar senha (Edge/IE) — evita duplicação */
-.sg-input::-ms-reveal,
-.sg-input::-ms-clear {
-  display: none;
-}
-.sg-input::-webkit-search-cancel-button {
-  -webkit-appearance: none;
-  appearance: none;
-}
-
-.sg-input::placeholder { color: #9bafa3; }
-.sg-input:hover { border-color: #a9c1b0; }
-.sg-input:focus {
-  outline: none;
-  border-color: var(--brand);
-  box-shadow: 0 0 0 4px rgba(34,197,94,.15);
-}
-.sg-input.is-error { border-color: #dc2626; }
-.sg-input.is-error:focus { box-shadow: 0 0 0 4px rgba(220,38,38,.15); }
-.sg-input:disabled { opacity: .7; cursor: not-allowed; }
-
-/* ---------- Botão de revelar senha (SVG customizado) ---------- */
-.sg-input-icon {
-  position: absolute;
-  right: 6px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 38px;
-  height: 38px;
-  display: inline-grid;
-  place-items: center;
-  background: transparent;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  color: var(--muted);
-  transition: background .15s, color .15s, transform .1s;
-}
-.sg-input-icon:hover {
-  background: var(--bg-soft);
-  color: var(--brand);
-}
-.sg-input-icon:active {
-  transform: translateY(-50%) scale(.94);
-}
-.sg-input-icon svg {
-  width: 20px;
-  height: 20px;
-  display: block;
-  pointer-events: none;
-}
-
-.sg-error-msg {
-  font-size: 12.5px;
-  color: var(--danger-ink);
-  font-weight: 500;
-  display: flex; align-items: center; gap: 6px;
-}
-.sg-error-msg::before {
-  content: "";
-  width: 6px; height: 6px; border-radius: 50%;
-  background: #dc2626;
-  flex-shrink: 0;
-}
-.sg-ok-msg {
-  font-size: 12.5px;
-  color: var(--brand);
-  font-weight: 600;
-  display: flex; align-items: center; gap: 6px;
-}
-
-/* ---------- Força da senha ---------- */
-.sg-strength { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
-.sg-strength-bar {
-  flex: 1;
-  height: 5px;
-  background: #e6efe9;
-  border-radius: 999px;
-  overflow: hidden;
-}
-.sg-strength-fill {
-  height: 100%;
-  border-radius: 999px;
-  transition: width .25s ease, background .25s ease;
-}
-.sg-strength-label {
-  font-size: 11.5px;
-  font-weight: 700;
-  min-width: 76px;
-  text-align: right;
-  letter-spacing: -.01em;
-}
-
-/* ---------- Requisitos ---------- */
-.sg-req-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 12px;
-  margin-top: 2px;
-}
-.sg-req {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--muted);
-  transition: color .15s;
-}
-.sg-req.is-ok { color: var(--brand); font-weight: 600; }
-.sg-req-dot {
-  width: 14px; height: 14px; border-radius: 50%;
-  display: inline-grid; place-items: center;
-  background: #eef4ee;
-  color: #809988;
-  font-size: 9px; font-weight: 800;
-  flex-shrink: 0;
-  transition: background .15s, color .15s;
-}
-.sg-req.is-ok .sg-req-dot {
-  background: #dcfce7;
-  color: var(--brand);
-}
-
-/* ---------- Checkbox de termos ---------- */
-.sg-termos {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 12px 14px;
-  border: 1.5px solid var(--line);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: border-color .15s, background .15s;
-  background: #fbfdfb;
-  position: relative;
-}
-.sg-termos:hover { border-color: var(--line-strong); background: #fff; }
-.sg-termos.is-checked { border-color: var(--brand); background: #f0fdf4; }
-.sg-termos input[type="checkbox"] {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-.sg-termos-box {
-  width: 20px; height: 20px;
-  border-radius: 6px;
-  border: 1.5px solid var(--line-strong);
-  background: #fff;
-  display: inline-grid; place-items: center;
-  color: transparent;
-  font-size: 12px; font-weight: 800;
-  flex-shrink: 0;
-  margin-top: 1px;
-  transition: background .15s, border-color .15s, color .15s;
-}
-.sg-termos.is-checked .sg-termos-box {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
-}
-.sg-termos-text { font-size: 13px; color: var(--ink-soft); line-height: 1.55; }
-.sg-termos-text a {
-  color: var(--brand);
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-.sg-termos-text a:hover { color: var(--brand-3); }
-
-/* ---------- Botão primário ---------- */
-.sg-btn-primary {
-  margin-top: 6px;
-  padding: 14px 20px;
-  background: var(--brand);
-  color: #fff;
-  border: none;
-  border-radius: 12px;
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -.01em;
-  cursor: pointer;
-  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  box-shadow: 0 12px 26px -12px rgba(22,101,52,.6);
-  transition: transform .15s ease, box-shadow .2s ease, background .15s ease;
-  text-align: center;
-}
-.sg-btn-primary:hover:not(:disabled) {
-  transform: translateY(-1px);
-  background: var(--brand-3);
-  box-shadow: 0 16px 32px -14px rgba(22,101,52,.7);
-}
-.sg-btn-primary:active:not(:disabled) { transform: translateY(0); }
-.sg-btn-primary:disabled {
-  opacity: .55;
-  cursor: not-allowed;
-  box-shadow: none;
-  transform: none;
-}
-.sg-spinner {
-  width: 16px; height: 16px;
-  border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.4);
-  border-top-color: #fff;
-  animation: sgSpin .7s linear infinite;
-}
-@keyframes sgSpin { to { transform: rotate(360deg); } }
-
-/* ---------- Rodapé do card ---------- */
-.sg-footer-text {
-  margin-top: 22px;
-  text-align: center;
-  font-size: 14px;
-  color: var(--muted);
-}
-.sg-footer-text a {
-  color: var(--brand);
-  font-weight: 700;
-  margin-left: 4px;
-}
-.sg-footer-text a:hover { text-decoration: underline; text-underline-offset: 3px; }
-
-/* ---------- Sucesso ---------- */
-.sg-success {
-  text-align: center;
-  animation: sgPop .4s cubic-bezier(.2,.7,.2,1);
-}
-@keyframes sgPop {
-  from { opacity: 0; transform: translateY(8px) scale(.98); }
-  to { opacity: 1; transform: none; }
-}
-.sg-success-icon {
-  width: 76px; height: 76px; margin: 0 auto 20px;
-  border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: 36px;
-  background: linear-gradient(135deg, #dcfce7, #bbf7d0);
-  border: 1px solid #bbf7d0;
-  box-shadow: 0 12px 30px -14px rgba(22,101,52,.4);
-}
-.sg-success-title {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -.025em;
-  color: var(--ink);
-  margin-bottom: 10px;
-}
-.sg-success-text {
-  font-size: 14.5px;
-  color: var(--ink-soft);
-  line-height: 1.65;
-  margin-bottom: 26px;
-}
-.sg-success-text strong { color: var(--brand); font-weight: 700; }
-.sg-success-note {
-  font-size: 12.5px;
-  color: var(--muted);
-  margin-top: 18px;
-}
-
-/* ---------- Responsivo ---------- */
-@media (max-width: 960px) {
-  .sg-wrap { grid-template-columns: 1fr; }
-  .sg-brand {
-    padding: 28px 24px;
-    gap: 24px;
-    justify-content: flex-start;
-  }
-  .sg-brand-logo { margin-bottom: 20px; font-size: 18px; }
-  .sg-brand-logo-mark { width: 38px; height: 38px; font-size: 19px; }
-  .sg-brand-title { font-size: 26px; margin-bottom: 10px; }
-  .sg-brand-sub { font-size: 15px; margin-bottom: 16px; }
-  .sg-brand-list { gap: 10px; }
-  .sg-brand-item { font-size: 14px; }
-  .sg-brand-footer { display: none; }
-  .sg-form-side { padding: 32px 20px 48px; }
-}
-@media (max-width: 600px) {
-  .sg-brand { padding: 24px 20px; }
-  .sg-brand-badge { font-size: 11px; padding: 5px 11px; margin-bottom: 14px; }
-  .sg-brand-title { font-size: 22px; }
-  .sg-brand-sub { font-size: 14px; }
-  .sg-brand-list { display: none; }
-  .sg-card {
-    padding: 28px 22px;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px -18px rgba(11,26,18,.22);
-  }
-  .sg-title { font-size: 22px; }
-  .sg-sub { font-size: 14px; }
-  .sg-success-icon { width: 64px; height: 64px; font-size: 30px; }
-  .sg-success-title { font-size: 20px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sg-alert, .sg-success { animation: none; }
-  .sg-spinner { animation-duration: 1.4s; }
-}
-`;
 
 /* ============================================================
    Subcomponente: ícone de olho (SVG)
@@ -622,11 +74,6 @@ export default function Signup() {
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
   const [tocados, setTocados] = useState<Record<string, boolean>>({});
-
-  // Limpa erro quando o usuário digita
-  useEffect(() => {
-    if (erro) setErro(null);
-  }, [nome, email, senha, confirmar]);
 
   // ---------- Força da senha ----------
   const forca = useMemo(() => {
@@ -705,7 +152,6 @@ export default function Signup() {
 
   return (
     <>
-      <style>{STYLES}</style>
       <div className="sg">
         <a href="#sg-main" className="sg-skip">Ir para o formulário</a>
 
@@ -714,7 +160,7 @@ export default function Signup() {
           <aside className="sg-brand" aria-label="Sobre o AgroGestor">
             <div className="sg-brand-top">
               <Link to="/" className="sg-brand-logo" aria-label="AgroGestor — início">
-                <span className="sg-brand-logo-mark" aria-hidden="true">🐄</span>
+                <img className="sg-brand-logo-mark" src="/logo.svg" alt="" />
                 <span>AgroGestor</span>
               </Link>
 
@@ -799,7 +245,7 @@ export default function Signup() {
                           type="text"
                           placeholder="João da Silva"
                           value={nome}
-                          onChange={(e) => setNome(e.target.value)}
+                          onChange={(e) => { setNome(e.target.value); setErro(null); }}
                           onBlur={() => marcarTocado('nome')}
                           required
                           autoComplete="name"
@@ -826,7 +272,7 @@ export default function Signup() {
                           type="email"
                           placeholder="seu@email.com"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(e) => { setEmail(e.target.value); setErro(null); }}
                           onBlur={() => marcarTocado('email')}
                           required
                           autoComplete="email"
@@ -853,7 +299,7 @@ export default function Signup() {
                           type={mostrarSenha ? 'text' : 'password'}
                           placeholder="Mínimo 6 caracteres"
                           value={senha}
-                          onChange={(e) => setSenha(e.target.value)}
+                          onChange={(e) => { setSenha(e.target.value); setErro(null); }}
                           onBlur={() => marcarTocado('senha')}
                           required
                           autoComplete="new-password"
@@ -934,7 +380,7 @@ export default function Signup() {
                           type={mostrarSenha ? 'text' : 'password'}
                           placeholder="Repita a senha"
                           value={confirmar}
-                          onChange={(e) => setConfirmar(e.target.value)}
+                          onChange={(e) => { setConfirmar(e.target.value); setErro(null); }}
                           onBlur={() => marcarTocado('confirmar')}
                           required
                           autoComplete="new-password"
