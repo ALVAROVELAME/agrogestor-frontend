@@ -3,12 +3,12 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { AxiosError, type AxiosAdapter } from 'axios';
-import { AuthProvider } from '../contexts/AuthContext';
-import RotaPublica from '../components/auth/RotaPublica';
-import RotaProtegida from '../components/auth/RotaProtegida';
-import LogoutButton from '../components/auth/LogoutButton';
-import { api } from '../services/api';
-import { authService } from '../services/auth.service';
+import { AuthProvider } from '../../contexts/AuthContext';
+import RotaPublica from '../../components/auth/RotaPublica';
+import RotaProtegida from '../../components/auth/RotaProtegida';
+import LogoutButton from '../../components/auth/LogoutButton';
+import { api } from '../../services/api';
+import { authService } from '../../services/auth.service';
 
 const adapterOriginal = api.defaults.adapter;
 afterEach(() => { api.defaults.adapter = adapterOriginal; window.history.replaceState({}, '', '/'); });

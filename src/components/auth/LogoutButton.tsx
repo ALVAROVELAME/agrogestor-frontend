@@ -1,5 +1,6 @@
 import { useAuth } from '../../contexts/AuthContext';
-import type { CSSProperties } from 'react';
+import { useState, type CSSProperties } from 'react';
+import ModalConfirmacao from '../ModalConfirmacao';
 import { useNavigate } from 'react-router-dom';
 
 interface Props {
@@ -16,10 +17,9 @@ export default function LogoutButton({
 }: Props) {
   const { logout } = useAuth();
   const navigate = useNavigate();
+  const [confirmacaoAberta, setConfirmacaoAberta] = useState(false);
 
   const handleLogout = () => {
-    if (confirmar && !window.confirm('Deseja realmente sair?')) return;
-
     // 1. Limpa o token/usuário do localStorage + state
     logout();
 
@@ -27,9 +27,10 @@ export default function LogoutButton({
   };
 
   return (
+    <>
     <button
       type="button"
-      onClick={handleLogout}
+      onClick={() => confirmar ? setConfirmacaoAberta(true) : handleLogout()}
       style={{
         padding: '8px 16px',
         background: 'transparent',
@@ -48,5 +49,7 @@ export default function LogoutButton({
     >
       Sair
     </button>
+    {confirmacaoAberta && <ModalConfirmacao titulo="Sair da conta?" mensagem="Deseja realmente sair da sua conta?" confirmar="Sair" aoCancelar={() => setConfirmacaoAberta(false)} aoConfirmar={handleLogout} />}
+    </>
   );
 }

@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { api } from '../services/api';
-import RecuperarSenha from '../pages/auth/RecuperarSenha';
-import RedefinirSenha from '../pages/auth/RedefinirSenha';
+import { api } from '../../services/api';
+import RecuperarSenha from '../../pages/auth/RecuperarSenha';
+import RedefinirSenha from '../../pages/auth/RedefinirSenha';
 
 const logout = vi.hoisted(() => vi.fn());
-vi.mock('../contexts/AuthContext', () => ({ useAuth: () => ({ logout }) }));
+vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => ({ logout }) }));
 
 describe('recuperação de senha', () => {
   it('solicita recuperação e apresenta resposta genérica', async () => {

@@ -1,4 +1,4 @@
-import type { Animal } from '../../types';
+import type { Animal } from '../../../types';
 
 export const CATEGORIAS: Animal['categoria'][] = ['Bezerra', 'Novilha', 'Vaca em Lactação', 'Vaca Seca'];
 

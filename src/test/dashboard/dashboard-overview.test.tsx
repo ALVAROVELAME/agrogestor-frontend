@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { VisaoGeral } from '../components/dashboard/VisaoGeral';
-import { calcularEstatisticas } from '../components/dashboard/metricas';
+import { VisaoGeral } from '../../components/dashboard/VisaoGeral';
+import { calcularEstatisticas } from '../../components/dashboard/utils/metricas';
 
 it('mostra indicadores e estados vazios sem animais', () => {
   render(<VisaoGeral stats={calcularEstatisticas([])} />);

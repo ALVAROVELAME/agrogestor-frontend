@@ -1,7 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import ResumoFinanceiro from '../components/dashboard/ResumoFinanceiro';
-import { gestaoService } from '../services/gestao.service';
+import ResumoFinanceiro from '../../components/dashboard/ResumoFinanceiro';
+import { gestaoService } from '../../services/gestao.service';
 
 afterEach(() => vi.restoreAllMocks());
 

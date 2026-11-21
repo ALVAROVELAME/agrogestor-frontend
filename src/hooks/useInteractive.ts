@@ -62,32 +62,55 @@ export function useParallax<T extends HTMLElement>() {
 
   useEffect(() => {
     const el = ref.current;
-    if (!el || !podeAnimar()) return;
+    if (!el) return;
     let raf = 0;
+    let activePointer: number | null = null;
     const clamp = (n: number) => Math.max(-1, Math.min(1, n));
 
     const onMove = (e: PointerEvent) => {
-      if (e.pointerType !== 'mouse') return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (e.pointerType !== 'mouse' && e.pointerId !== activePointer) return;
+      const { clientX, clientY } = e;
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const r = el.getBoundingClientRect();
-        const px = clamp(((e.clientX - r.left) / r.width - 0.5) * 2);
-        const py = clamp(((e.clientY - r.top) / r.height - 0.5) * 2);
+        const px = clamp(((clientX - r.left) / r.width - 0.5) * 2);
+        const py = clamp(((clientY - r.top) / r.height - 0.5) * 2);
         el.style.setProperty('--px', px.toFixed(3));
         el.style.setProperty('--py', py.toFixed(3));
       });
     };
     const onLeave = () => {
+      cancelAnimationFrame(raf);
       el.style.setProperty('--px', '0');
       el.style.setProperty('--py', '0');
+    };
+    const onDown = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') return;
+      activePointer = e.pointerId;
+      el.setPointerCapture(e.pointerId);
+      onMove(e);
+    };
+    const onEnd = (e: PointerEvent) => {
+      if (e.pointerId !== activePointer) return;
+      activePointer = null;
+      onLeave();
     };
 
     window.addEventListener('pointermove', onMove, { passive: true });
     document.documentElement.addEventListener('pointerleave', onLeave);
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointerup', onEnd);
+    el.addEventListener('pointercancel', onEnd);
+    el.addEventListener('lostpointercapture', onEnd);
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener('pointermove', onMove);
       document.documentElement.removeEventListener('pointerleave', onLeave);
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointerup', onEnd);
+      el.removeEventListener('pointercancel', onEnd);
+      el.removeEventListener('lostpointercapture', onEnd);
     };
   }, []);
 

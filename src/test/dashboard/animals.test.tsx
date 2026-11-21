@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import AnimalForm from '../components/AnimalForm';
-import { useAnimais } from '../hooks/useAnimais';
-import { animaisService } from '../services/animais.service';
-import type { Animal } from '../types';
+import AnimalForm from '../../components/AnimalForm';
+import { useAnimais } from '../../hooks/useAnimais';
+import { animaisService } from '../../services/animais.service';
+import type { Animal } from '../../types';
 
 const animal: Animal = { id: 1, brinco: '0412', nome: 'Mimosa', categoria: 'Vaca em Lactação', producaoDiaria: 12 };
 

@@ -1,9 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import PreviaGestao from '../components/dashboard/PreviaGestao';
-import { gestaoService } from '../services/gestao.service';
-import type { Animal } from '../types';
+import PreviaGestao from '../../components/dashboard/PreviaGestao';
+import { gestaoService } from '../../services/gestao.service';
+import type { Animal } from '../../types';
 
 const animais: Animal[] = [{ id: 9, nome: 'Mimosa', brinco: '0412', categoria: 'Vaca em Lactação', producaoDiaria: 20 }];
 beforeEach(() => { vi.restoreAllMocks(); });

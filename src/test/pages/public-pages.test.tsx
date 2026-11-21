@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { api } from '../services/api';
-import Signup from '../pages/auth/Signup';
-import ConfirmarEmail from '../pages/auth/ConfirmarEmail';
-import Termos from '../pages/legal/Termos';
-import Privacidade from '../pages/legal/Privacidade';
-import { StatusView } from '../pages/Status';
-import Landing from '../pages/Landing';
+import { api } from '../../services/api';
+import Signup from '../../pages/auth/Signup';
+import ConfirmarEmail from '../../pages/auth/ConfirmarEmail';
+import Termos from '../../pages/legal/Termos';
+import Privacidade from '../../pages/legal/Privacidade';
+import { StatusView } from '../../pages/Status';
+import Landing from '../../pages/Landing';
 
 const page = (component: React.ReactNode, path = '/') => render(<MemoryRouter initialEntries={[path]}>{component}</MemoryRouter>);
 describe('telas e interações', () => {

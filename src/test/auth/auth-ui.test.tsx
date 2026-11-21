@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { api } from '../services/api';
-import Login from '../pages/auth/Login';
-import RotaProtegida from '../components/auth/RotaProtegida';
-import RotaPublica from '../components/auth/RotaPublica';
+import { api } from '../../services/api';
+import Login from '../../pages/auth/Login';
+import RotaProtegida from '../../components/auth/RotaProtegida';
+import RotaPublica from '../../components/auth/RotaPublica';
 
 const auth = vi.hoisted(() => ({ login: vi.fn(), autenticado: false, carregando: false }));
-vi.mock('../contexts/AuthContext', () => ({ useAuth: () => auth }));
+vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => auth }));
 
 describe('login e rotas', () => {
   it('envia credenciais e encaminha ao painel', async () => {

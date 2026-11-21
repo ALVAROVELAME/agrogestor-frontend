@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { api } from '../services/api';
-import { authService } from '../services/auth.service';
-import { animaisService } from '../services/animais.service';
+import { api } from '../../services/api';
+import { authService } from '../../services/auth.service';
+import { animaisService } from '../../services/animais.service';
 
 describe('autenticação e rebanho', () => {
   beforeEach(() => localStorage.clear());

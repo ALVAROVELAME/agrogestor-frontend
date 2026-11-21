@@ -7,10 +7,11 @@ import {
   useRef,
 } from 'react';
 import AnimalForm from '../components/AnimalForm';
+import ModalConfirmacao from '../components/ModalConfirmacao';
 import { KpiCard, VisaoGeral } from '../components/dashboard/VisaoGeral';
 import PreviaGestao, { type SecaoGestao } from '../components/dashboard/PreviaGestao';
 import Relatorios from '../components/dashboard/Relatorios';
-import { calcularEstatisticas, formatarLitros } from '../components/dashboard/metricas';
+import { calcularEstatisticas, formatarLitros } from '../components/dashboard/utils/metricas';
 import LogoutButton from '../components/auth/LogoutButton';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/auth.service';
@@ -119,6 +120,8 @@ export default function Dashboard() {
   const { usuario } = useAuth();
 
   const [aba, setAba] = useState<Aba>('visao');
+  const [menuRecolhido, setMenuRecolhido] = useState(() => localStorage.getItem('agrogestor:menu-recolhido') === 'true');
+  useEffect(() => { localStorage.setItem('agrogestor:menu-recolhido', String(menuRecolhido)); }, [menuRecolhido]);
   const [animalEditando, setAnimalEditando] = useState<Animal | null>(null);
   const [busca, setBusca] = useState('');
   const [categoriaFiltro, setCategoriaFiltro] = useState<'Todas' | Animal['categoria']>('Todas');
@@ -128,6 +131,7 @@ export default function Dashboard() {
   const [paletaSelecionada, setPaletaSelecionada] = useState(0);
 
   const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
+  const [confirmacao, setConfirmacao] = useState<{ titulo: string; mensagem: string; acao: () => void } | null>(null);
   const [senhaExcluir, setSenhaExcluir] = useState('');
   const [excluindo, setExcluindo] = useState(false);
   const [erroExcluir, setErroExcluir] = useState<string | null>(null);
@@ -208,10 +212,6 @@ export default function Dashboard() {
 
   const handleExcluir = useCallback(
     async (animal: Animal) => {
-      const ok = window.confirm(
-        `Excluir "${animal.nome}" (brinco ${animal.brinco})? As ordenhas, tarefas e eventos vinculados também serão excluídos. Esta ação não pode ser desfeita.`
-      );
-      if (!ok) return;
       try {
         await excluir(animal.id);
         if (animalEditando?.id === animal.id) setAnimalEditando(null);
@@ -262,7 +262,6 @@ export default function Dashboard() {
   );
 
   const zerarRebanho = useCallback(async () => {
-    if (!confirm('Apagar TODOS os animais? As ordenhas, tarefas e eventos vinculados também serão excluídos. Esta ação não pode ser desfeita.')) return;
     try {
       for (const a of animais) {
         if (a.id !== undefined && a.id !== null) {
@@ -400,11 +399,13 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="dash" data-theme={tema}>
-        <aside className="dash-sidebar" aria-label="Navegação principal">
+      <div className={`dash ${menuRecolhido ? "min-[1025px]:grid-cols-[76px_minmax(0,1fr)]!" : ""} data-[theme=claro]:![--bg:#f5f8f6] data-[theme=claro]:![--surface-2:#e9f5ee] data-[theme=claro]:![--surface-3:#d9eee2] data-[theme=claro]:![--sidebar:#ffffff] data-[theme=claro]:![--border:#c6dfd0] data-[theme=claro]:![--border-strong:#799d88] data-[theme=claro]:![--brand:#116137] data-[theme=claro]:![--brand-2:#08713e] data-[theme=claro]:![--brand-3:#06452a] data-[theme=claro]:![--brand-soft:#e0f3e6]`} data-theme={tema}>
+        <aside id="menu-lateral" className={`dash-sidebar ${menuRecolhido ? "px-3!" : ""}`} aria-label="Navegação principal">
           <div className="dash-brand">
-            <span className="dash-brand-mark" aria-hidden="true">🐄</span>
-            <div className="dash-brand-text">
+            <button type="button" className="dash-brand-mark cursor-pointer overflow-hidden p-0! transition-transform hover:scale-105" onClick={() => setMenuRecolhido(v => !v)} aria-controls="menu-lateral" aria-expanded={!menuRecolhido} aria-label={menuRecolhido ? 'Expandir barra lateral' : 'Recolher barra lateral'} title={menuRecolhido ? 'Expandir barra lateral' : 'Recolher barra lateral'}>
+              <img src="/logo.svg" alt="" className="h-full w-full" />
+            </button>
+            <div className={menuRecolhido ? "sr-only" : "dash-brand-text"}>
               <span className="dash-brand-name">AgroGestor</span>
               <span className="dash-brand-sub">Gestão de Rebanho</span>
             </div>
@@ -412,12 +413,12 @@ export default function Dashboard() {
 
           <nav className="dash-nav" aria-label="Áreas do aplicativo">
             {gruposNavegacao.map(grupo => <div key={grupo.titulo}>
-              <div className="dash-nav-label">{grupo.titulo}</div>
+              <div className={menuRecolhido ? "sr-only" : "dash-nav-label"}>{grupo.titulo}</div>
               {grupo.itens.map(({ id, icone, texto, badge }) => <button key={id} type="button"
-                className={`dash-nav-btn${aba === id || (aba === 'ficha' && id === 'rebanho') ? ' is-active' : ''}`}
-                onClick={() => setAba(id)} aria-current={aba === id || (aba === 'ficha' && id === 'rebanho') ? 'page' : undefined}>
-                <span className="dash-nav-icon" aria-hidden="true">{icone}</span><span>{texto}</span>
-                {badge ? <span className="dash-nav-badge">{badge}</span> : null}
+                className={`dash-nav-btn ${menuRecolhido ? "justify-center! px-2!" : ""} [[data-theme=claro]_&.is-active]:shadow-[inset_3px_0_0_#08713e]${aba === id || (aba === 'ficha' && id === 'rebanho') ? ' is-active' : ''}`}
+                onClick={() => setAba(id)} title={menuRecolhido ? texto : undefined} aria-current={aba === id || (aba === 'ficha' && id === 'rebanho') ? 'page' : undefined}>
+                <span className="dash-nav-icon" aria-hidden="true">{icone}</span><span className={menuRecolhido ? "sr-only" : undefined}>{texto}</span>
+                {badge ? <span className={menuRecolhido ? "sr-only" : "dash-nav-badge"}>{badge}</span> : null}
               </button>)}
             </div>)}
           </nav>
@@ -425,16 +426,17 @@ export default function Dashboard() {
           <div className="dash-sidebar-footer">
             <button
               type="button"
-              className="dash-nav-btn"
+              className={`dash-nav-btn ${menuRecolhido ? 'justify-center! px-2!' : ''}`}
+              title={menuRecolhido ? 'Buscar' : undefined}
               onClick={() => { setPaletaAberta(true); setBuscaPaleta(''); setPaletaSelecionada(0); }}
             >
               <span className="dash-nav-icon" aria-hidden="true">🔍</span>
-              <span>Buscar…</span>
-              <kbd style={{ marginLeft: 'auto', fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--ink-soft)' }}>Ctrl K</kbd>
+              <span className={menuRecolhido ? "sr-only" : undefined}>Buscar…</span>
+              {!menuRecolhido && <kbd style={{ marginLeft: 'auto', fontSize: 10, padding: '2px 6px', borderRadius: 4, background: 'var(--surface)', border: '1px solid var(--border)', color: 'var(--ink-soft)' }}>Ctrl K</kbd>}
             </button>
-            <button type="button" className="dash-nav-btn" onClick={alternar}>
+            <button type="button" className={`dash-nav-btn ${menuRecolhido ? "justify-center! px-2!" : ""}`} onClick={alternar} title={tema === "claro" ? "Modo escuro" : "Modo claro"}>
               <span className="dash-nav-icon" aria-hidden="true">{tema === 'claro' ? '🌙' : '☀️'}</span>
-              <span>{tema === 'claro' ? 'Modo escuro' : 'Modo claro'}</span>
+              <span className={menuRecolhido ? "sr-only" : undefined}>{tema === 'claro' ? 'Modo escuro' : 'Modo claro'}</span>
             </button>
           </div>
         </aside>
@@ -710,7 +712,7 @@ export default function Dashboard() {
                                       <button
                                         type="button"
                                         className="dash-row-btn is-danger"
-                                        onClick={() => handleExcluir(a)}
+                                        onClick={() => setConfirmacao({ titulo: `Excluir ${a.nome}?`, mensagem: `Brinco ${a.brinco}. As ordenhas, tarefas e eventos vinculados também serão excluídos. Esta ação não pode ser desfeita.`, acao: () => void handleExcluir(a) })}
                                         aria-label={`Excluir ${a.nome}`}
                                         title="Excluir"
                                       >
@@ -788,7 +790,7 @@ export default function Dashboard() {
                     <button
                       type="button"
                       className="dash-btn dash-btn-danger"
-                      onClick={zerarRebanho}
+                      onClick={() => setConfirmacao({ titulo: 'Zerar rebanho?', mensagem: 'Todos os animais e as ordenhas, tarefas e eventos vinculados serão excluídos. Esta ação não pode ser desfeita.', acao: () => void zerarRebanho() })}
                     >
                       Zerar rebanho
                     </button>
@@ -838,7 +840,7 @@ export default function Dashboard() {
               aria-label="Navegação"
             >
               <div className="dash-brand">
-                <span className="dash-brand-mark" aria-hidden="true">🐄</span>
+                <span className="dash-brand-mark overflow-hidden" aria-hidden="true"><img src="/logo.svg" alt="" className="h-full w-full" /></span>
                 <div className="dash-brand-text">
                   <span className="dash-brand-name">AgroGestor</span>
                   <span className="dash-brand-sub">Gestão de Rebanho</span>
@@ -866,6 +868,8 @@ export default function Dashboard() {
             </aside>
           </>
         )}
+
+        {confirmacao && <ModalConfirmacao titulo={confirmacao.titulo} mensagem={confirmacao.mensagem} confirmar="Excluir" perigoso aoCancelar={() => setConfirmacao(null)} aoConfirmar={() => { const acao = confirmacao.acao; setConfirmacao(null); acao(); }} />}
 
         {modalExcluirAberto && (
           <div

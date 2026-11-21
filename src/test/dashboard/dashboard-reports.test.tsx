@@ -1,10 +1,10 @@
 import { expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import Relatorios from '../components/dashboard/Relatorios';
-import { VisaoGeral } from '../components/dashboard/VisaoGeral';
-import { calcularEstatisticas } from '../components/dashboard/metricas';
-import type { Animal } from '../types';
+import Relatorios from '../../components/dashboard/Relatorios';
+import { VisaoGeral } from '../../components/dashboard/VisaoGeral';
+import { calcularEstatisticas } from '../../components/dashboard/utils/metricas';
+import type { Animal } from '../../types';
 
 const animais: Animal[] = [
   { id: 1, brinco: '01', nome: 'Mimosa', categoria: 'Vaca em Lactação', producaoDiaria: 20 },

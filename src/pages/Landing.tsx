@@ -77,6 +77,26 @@ export default function Landing() {
   const magFinal = useMagnet<HTMLAnchorElement>();
 
   useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    if (typeof ResizeObserver === 'undefined') {
+      const updateScale = () => {
+        scene.style.setProperty('--scene-scale', String(Math.min(1, scene.clientWidth / 650)));
+      };
+      updateScale();
+      window.addEventListener('resize', updateScale);
+      return () => window.removeEventListener('resize', updateScale);
+    }
+
+    const resize = new ResizeObserver(([entry]) => {
+      scene.style.setProperty('--scene-scale', String(Math.min(1, entry.contentRect.width / 650)));
+    });
+    resize.observe(scene);
+    return () => resize.disconnect();
+  }, [sceneRef]);
+
+  useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 16);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });

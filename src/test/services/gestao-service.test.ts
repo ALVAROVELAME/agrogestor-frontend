@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { api } from '../services/api';
-import { gestaoService } from '../services/gestao.service';
+import { api } from '../../services/api';
+import { gestaoService } from '../../services/gestao.service';
 
 afterEach(() => vi.restoreAllMocks());
 
