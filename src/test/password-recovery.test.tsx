@@ -23,6 +23,17 @@ describe('recuperação de senha', () => {
     render(<MemoryRouter><RedefinirSenha /></MemoryRouter>);
     expect(screen.getByRole('alert')).toHaveTextContent('incompleto');
   });
+  it('atualiza as orientações e a força conforme a senha é digitada', async () => {
+    render(<MemoryRouter initialEntries={['/reset-password?token=teste']}><RedefinirSenha /></MemoryRouter>);
+    const user = userEvent.setup();
+    expect(screen.getByText(/1 maiúscula — não atendido/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Nova senha'), 'Senha123!');
+    expect(screen.getByText(/6\+ caracteres — atendido/)).toBeInTheDocument();
+    expect(screen.getByText(/1 maiúscula — atendido/)).toBeInTheDocument();
+    expect(screen.getByText(/1 número — atendido/)).toBeInTheDocument();
+    expect(screen.getByText(/1 símbolo — atendido/)).toBeInTheDocument();
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '4');
+  });
   it('rejeita confirmação diferente e envia senha válida', async () => {
     const post = vi.spyOn(api, 'post').mockResolvedValue({ data: {} });
     render(<MemoryRouter initialEntries={['/reset-password?token=teste']}><Routes><Route path="/reset-password" element={<RedefinirSenha />} /></Routes></MemoryRouter>);
