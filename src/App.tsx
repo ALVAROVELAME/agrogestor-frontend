@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { AuthProvider } from './contexts/AuthContext';
 import RotaProtegida from './components/auth/RotaProtegida';
 import RotaPublica from './components/auth/RotaPublica';
+import CarregamentoPagina from './components/CarregamentoPagina';
 
 const Landing = lazy(() => import('./pages/Landing'));
 const Login = lazy(() => import('./pages/auth/Login'));
@@ -19,7 +20,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Suspense fallback={<div role="status">Carregando...</div>}>
+        <Suspense fallback={<CarregamentoPagina />}>
         <Routes>
           {/* ============ ROTAS PÚBLICAS ============ */}
           <Route

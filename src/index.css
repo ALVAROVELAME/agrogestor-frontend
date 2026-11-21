@@ -2,6 +2,26 @@
 @import "tailwindcss/theme.css";
 @import "tailwindcss/utilities.css";
 
+/* Carregamento entre páginas */
+.pagina-carregando {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f7faf6;
+  color: #173d27;
+  font-family: 'Figtree', system-ui, sans-serif;
+}
+.pagina-carregando__conteudo { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.pagina-carregando__marca { position: relative; display: grid; place-items: center; width: 84px; height: 84px; margin-bottom: 20px; }
+.pagina-carregando__marca img { width: 42px; height: 42px; }
+.pagina-carregando__anel { position: absolute; inset: 0; border: 3px solid #e0eee3; border-top-color: #53a66c; border-radius: 50%; animation: pagina-carregando-girar 1.2s linear infinite; }
+.pagina-carregando__nome { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+.pagina-carregando__texto { margin-top: 6px; color: #607a68; font-size: 14px; }
+@keyframes pagina-carregando-girar { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pagina-carregando__anel { animation: none; } }
+
 /* ============================================================
    AGROGESTOR — DESIGN SYSTEM
    ============================================================ */
