@@ -2461,6 +2461,7 @@ button { cursor: pointer; border: none; background: none; }
 }
 
 /* ---------- Força da senha ---------- */
+.senha-indicador { --muted: #4f6a5b; --brand: #166534; display: flex; flex-direction: column; gap: 8px; }
 .sg-strength { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
 .sg-strength-bar {
   flex: 1;

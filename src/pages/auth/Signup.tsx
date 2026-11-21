@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../../services/api';
+import IndicadorSenha from '../../components/IndicadorSenha';
 
 // ============================================================
 // Regras de validação
@@ -74,27 +75,6 @@ export default function Signup() {
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
   const [tocados, setTocados] = useState<Record<string, boolean>>({});
-
-  // ---------- Força da senha ----------
-  const forca = useMemo(() => {
-    let score = 0;
-    if (senha.length >= 8) score++;
-    if (/[A-Z]/.test(senha)) score++;
-    if (/[0-9]/.test(senha)) score++;
-    if (/[^A-Za-z0-9]/.test(senha)) score++;
-    return score;
-  }, [senha]);
-
-  const forcaInfo = useMemo(() => {
-    const map = [
-      { label: 'Muito fraca', cor: '#b91c1c' },
-      { label: 'Fraca',       cor: '#c2410c' },
-      { label: 'Média',       cor: '#a16207' },
-      { label: 'Boa',         cor: '#15803d' },
-      { label: 'Forte',       cor: '#166534' },
-    ];
-    return map[forca];
-  }, [forca]);
 
   // ---------- Validação geral do form ----------
   const erros = useMemo(() => {
@@ -327,42 +307,7 @@ export default function Signup() {
                         </button>
                       </div>
 
-                      {senha && (
-                        <>
-                          <div
-                            className="sg-strength"
-                            id="sg-strength"
-                            role="progressbar"
-                            aria-valuenow={forca}
-                            aria-valuemin={0}
-                            aria-valuemax={4}
-                            aria-label={`Força da senha: ${forcaInfo.label}`}
-                          >
-                            <div className="sg-strength-bar">
-                              <div
-                                className="sg-strength-fill"
-                                style={{
-                                  width: `${(forca / 4) * 100}%`,
-                                  background: forcaInfo.cor,
-                                }}
-                              />
-                            </div>
-                            <span
-                              className="sg-strength-label"
-                              style={{ color: forcaInfo.cor }}
-                            >
-                              {forcaInfo.label}
-                            </span>
-                          </div>
-
-                          <div className="sg-req-list">
-                            <Requisito ok={senha.length >= 6} texto="6+ caracteres" />
-                            <Requisito ok={/[A-Z]/.test(senha)} texto="1 maiúscula" />
-                            <Requisito ok={/[0-9]/.test(senha)} texto="1 número" />
-                            <Requisito ok={/[^A-Za-z0-9]/.test(senha)} texto="1 símbolo" />
-                          </div>
-                        </>
-                      )}
+                      <IndicadorSenha senha={senha} id="sg-strength" />
 
                       {mostrarErro('senha') && (
                         <span className="sg-error-msg" id="sg-erro-senha">
@@ -472,14 +417,3 @@ export default function Signup() {
   );
 }
 
-// ============================================================
-// Subcomponente: Requisito da senha
-// ============================================================
-function Requisito({ ok, texto }: { ok: boolean; texto: string }) {
-  return (
-    <span className={`sg-req${ok ? ' is-ok' : ''}`} aria-live="polite">
-      <span className="sg-req-dot" aria-hidden="true">{ok ? '✓' : ''}</span>
-      {texto}
-    </span>
-  );
-}

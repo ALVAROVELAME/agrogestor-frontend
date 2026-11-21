@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
+import IndicadorSenha from '../../components/IndicadorSenha';
 
 export default function RedefinirSenha() {
   const [params] = useSearchParams();
@@ -14,14 +15,6 @@ export default function RedefinirSenha() {
   const [enviando, setEnviando] = useState(false);
   const [concluido, setConcluido] = useState(false);
   const [erro, setErro] = useState('');
-  const forca = Number(senha.length >= 8) + Number(/[A-Z]/.test(senha)) + Number(/[0-9]/.test(senha)) + Number(/[^A-Za-z0-9]/.test(senha));
-  const forcaInfo = [
-    { label: 'Muito fraca', cor: '#b91c1c' },
-    { label: 'Fraca', cor: '#c2410c' },
-    { label: 'Média', cor: '#a16207' },
-    { label: 'Boa', cor: '#15803d' },
-    { label: 'Forte', cor: '#166534' },
-  ][forca];
 
   async function redefinir(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,22 +44,8 @@ export default function RedefinirSenha() {
           <form onSubmit={redefinir} className="mt-6 flex flex-col gap-5">
             <div className="flex flex-col gap-2">
               <label htmlFor="nova-senha" className="font-semibold">Nova senha</label>
-              <input id="nova-senha" type={mostrar ? 'text' : 'password'} autoComplete="new-password" required minLength={6} maxLength={100} value={senha} onChange={e => setSenha(e.target.value)} disabled={enviando} aria-describedby="senha-orientacoes" className="min-h-12 rounded-xl border border-[#a7bcae] px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#205b3c]" />
-              <div id="senha-orientacoes">
-                <p className="text-sm text-[#344d3e]">Mínimo de 6 caracteres e máximo de 72 bytes. Para uma senha mais forte, use também:</p>
-                <ul className="mt-2 grid grid-cols-2 gap-2 text-sm">
-                  {[
-                    { ok: senha.length >= 6, texto: '6+ caracteres' },
-                    { ok: /[A-Z]/.test(senha), texto: '1 maiúscula' },
-                    { ok: /[0-9]/.test(senha), texto: '1 número' },
-                    { ok: /[^A-Za-z0-9]/.test(senha), texto: '1 símbolo' },
-                  ].map(({ ok, texto }) => <li key={texto} className={ok ? 'font-semibold text-green-700' : 'text-[#526b5b]'}><span aria-hidden="true">{ok ? '✓' : '○'}</span> {texto}{ok ? ' — atendido' : ' — não atendido'}</li>)}
-                </ul>
-              </div>
-              {senha && <div className="mt-1" role="progressbar" aria-valuenow={forca} aria-valuemin={0} aria-valuemax={4} aria-label={`Força da senha: ${forcaInfo.label}`}>
-                <div className="h-2 overflow-hidden rounded-full bg-[#e3ebe4]"><div className="h-full rounded-full transition-all" style={{ width: `${forca * 25}%`, backgroundColor: forcaInfo.cor }} /></div>
-                <p className="mt-1 text-sm font-semibold" style={{ color: forcaInfo.cor }}>Força da senha: {forcaInfo.label}</p>
-              </div>}
+              <input id="nova-senha" type={mostrar ? 'text' : 'password'} autoComplete="new-password" required minLength={6} maxLength={100} value={senha} onChange={e => setSenha(e.target.value)} disabled={enviando} aria-describedby={senha ? 'reset-strength' : undefined} className="min-h-12 rounded-xl border border-[#a7bcae] px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#205b3c]" />
+              <IndicadorSenha senha={senha} id="reset-strength" />
             </div>
             <div className="flex flex-col gap-2"><label htmlFor="confirmar-nova-senha" className="font-semibold">Confirmar nova senha</label><input id="confirmar-nova-senha" type={mostrar ? 'text' : 'password'} autoComplete="new-password" required minLength={6} maxLength={100} value={confirmacao} onChange={e => setConfirmacao(e.target.value)} disabled={enviando} className="min-h-12 rounded-xl border border-[#a7bcae] px-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#205b3c]" /></div>
             <label className="flex items-center gap-2"><input type="checkbox" checked={mostrar} onChange={e => setMostrar(e.target.checked)} /> Mostrar senhas</label>

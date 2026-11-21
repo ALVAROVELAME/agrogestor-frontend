@@ -26,12 +26,13 @@ describe('recuperação de senha', () => {
   it('atualiza as orientações e a força conforme a senha é digitada', async () => {
     render(<MemoryRouter initialEntries={['/reset-password?token=teste']}><RedefinirSenha /></MemoryRouter>);
     const user = userEvent.setup();
-    expect(screen.getByText(/1 maiúscula — não atendido/)).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Nova senha'), 'a');
+    expect(screen.getByLabelText('1 maiúscula: não atendido')).toBeInTheDocument();
     await user.type(screen.getByLabelText('Nova senha'), 'Senha123!');
-    expect(screen.getByText(/6\+ caracteres — atendido/)).toBeInTheDocument();
-    expect(screen.getByText(/1 maiúscula — atendido/)).toBeInTheDocument();
-    expect(screen.getByText(/1 número — atendido/)).toBeInTheDocument();
-    expect(screen.getByText(/1 símbolo — atendido/)).toBeInTheDocument();
+    expect(screen.getByLabelText('6+ caracteres: atendido')).toBeInTheDocument();
+    expect(screen.getByLabelText('1 maiúscula: atendido')).toBeInTheDocument();
+    expect(screen.getByLabelText('1 número: atendido')).toBeInTheDocument();
+    expect(screen.getByLabelText('1 símbolo: atendido')).toBeInTheDocument();
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '4');
   });
   it('rejeita confirmação diferente e envia senha válida', async () => {
