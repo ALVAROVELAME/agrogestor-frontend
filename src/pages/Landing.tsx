@@ -182,7 +182,7 @@ export default function Landing() {
             <div className="ag-hero-inner relative isolate">
               <div className="ag-hero-text">
                 <h1 id="hero-title" className="ag-hero-title">
-                  Saiba quanto cada vaca produz, sem caderno nem planilha.
+                  Saiba quanto cada vaca produz, com informações organizadas em um só lugar.
                 </h1>
                 <p className="ag-hero-sub">
                   O AgroGestor reúne cadastro por brinco, produção de leite e relatórios do
@@ -314,8 +314,8 @@ export default function Landing() {
 
                 <div className="ag-feat col-span-2 max-[960px]:col-span-3 max-[680px]:col-span-6">
                   <Tilt className="ag-card">
-                    <h3 className="ag-card-title ag-pop">Relatórios e backup</h3>
-                    <p className="ag-card-desc ag-pop">Exporte os dados do rebanho em JSON sempre que quiser guardar uma cópia.</p>
+                    <h3 className="ag-card-title ag-pop">Relatórios em planilha</h3>
+                    <p className="ag-card-desc ag-pop">Baixe uma planilha organizada com os animais filtrados, indicadores do rebanho e resumo financeiro.</p>
                   </Tilt>
                 </div>
 
@@ -545,7 +545,7 @@ export default function Landing() {
                   Não. O AgroGestor funciona no navegador do computador, do tablet e do celular.
                 </FaqItem>
                 <FaqItem pergunta="Meus dados ficam seguros?">
-                  Os dados são salvos automaticamente e você pode exportar um backup em JSON quando quiser.
+                  Os dados são salvos na sua conta. Você pode baixar relatórios em planilha e exportar os dados dos animais em JSON.
                 </FaqItem>
                 <FaqItem pergunta="Posso usar de graça para sempre?">
                   Pode. O plano Grátis permite até 30 animais, sem custo e sem prazo de validade.
@@ -595,7 +595,7 @@ export default function Landing() {
             <div className="ag-footer-col">
               <Logo />
               <p className="ag-footer-desc">
-                Gestão do rebanho leiteiro para o produtor rural, sem planilhas e sem complicação.
+                Gestão do rebanho leiteiro para o produtor rural, com dados organizados e relatórios para baixar.
               </p>
             </div>
 

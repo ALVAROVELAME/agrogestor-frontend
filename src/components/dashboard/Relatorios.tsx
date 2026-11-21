@@ -3,13 +3,18 @@ import type { Animal } from '../../types';
 import { CATEGORIAS, calcularEstatisticas, formatarLitros } from './metricas';
 import { KpiCard } from './VisaoGeral';
 import ResumoFinanceiro from './ResumoFinanceiro';
+import { gestaoService } from '../../services/gestao.service';
+import { periodoFinanceiro } from './periodoFinanceiro';
+import { baixarPlanilhaRelatorio } from './planilhaRelatorio';
 
 const normalizar = (texto: string) => texto.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 
-export default function Relatorios({ animais }: { animais: Animal[] }) {
+export default function Relatorios({ animais, carregandoAnimais = false, erroAnimais = null }: { animais: Animal[]; carregandoAnimais?: boolean; erroAnimais?: string | null }) {
   const [busca, setBusca] = useState('');
   const [categoria, setCategoria] = useState('Todas');
   const [ordem, setOrdem] = useState('nome');
+  const [exportando, setExportando] = useState(false);
+  const [erroExportacao, setErroExportacao] = useState('');
   const filtrados = useMemo(() => {
     const termo = normalizar(busca.trim());
     const resultado = animais.filter(a => (categoria === 'Todas' || a.categoria === categoria) && (!termo || normalizar(`${a.nome} ${a.brinco}`).includes(termo)));
@@ -17,6 +22,20 @@ export default function Relatorios({ animais }: { animais: Animal[] }) {
   }, [animais, busca, categoria, ordem]);
   const stats = useMemo(() => calcularEstatisticas(filtrados), [filtrados]);
   const cores = ['#3b82f6', '#d18a14', '#21a366', '#8b5cf6'];
+  async function exportar() {
+    setExportando(true);
+    setErroExportacao('');
+    try {
+      const geradoEm = new Date();
+      const periodo = periodoFinanceiro(geradoEm);
+      const financeiro = await gestaoService.resumoFinanceiro(periodo.inicio, periodo.fim);
+      await baixarPlanilhaRelatorio({ animais: filtrados, totalAnimais: animais.length, busca, categoria, ordem, financeiro, ...periodo, geradoEm });
+    } catch {
+      setErroExportacao('Não foi possível gerar a planilha. Confira a conexão com a API e tente novamente.');
+    } finally {
+      setExportando(false);
+    }
+  }
 
   return <>
     <section className="dash-panel" aria-labelledby="filtros-relatorio">
@@ -51,7 +70,11 @@ export default function Relatorios({ animais }: { animais: Animal[] }) {
     </section>
     <ResumoFinanceiro emRelatorio />
     <section className="dash-panel" aria-labelledby="rel-title">
-      <div className="dash-panel-head"><h2 id="rel-title" className="dash-panel-title">Relatório detalhado</h2><button type="button" className="dash-btn dash-btn-ghost" onClick={() => window.print()}>🖨️ Imprimir</button></div>
+      <div className="dash-panel-head"><h2 id="rel-title" className="dash-panel-title">Relatório detalhado</h2><button type="button" className="dash-btn dash-btn-ghost" onClick={() => void exportar()} disabled={exportando || carregandoAnimais || !!erroAnimais}>{exportando ? 'Preparando planilha…' : '↓ Baixar planilha (.xlsx)'}</button></div>
+      <p className="mb-3 text-sm text-[var(--muted)]">A planilha inclui os animais filtrados, indicadores e o resumo financeiro dos últimos 365 dias.</p>
+      {carregandoAnimais && <p role="status">Carregando dados do rebanho para exportação…</p>}
+      {erroAnimais && <p role="alert">Não foi possível carregar o rebanho. A exportação está indisponível.</p>}
+      {erroExportacao && <p role="alert" className="af-error">{erroExportacao}</p>}
       <p className="dash-table-hint" aria-hidden="true"><span>↔</span> Arraste para o lado para ver todas as colunas</p>
       <div className="dash-table-wrap" role="region" aria-label="Tabela de animais" tabIndex={0}><table className="dash-table">
         <caption className="sr-only">Relatório detalhado dos animais filtrados, com valores atuais cadastrados</caption>

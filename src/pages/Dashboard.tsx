@@ -730,7 +730,7 @@ export default function Dashboard() {
               </>
             )}
 
-            {aba === 'relatorios' && <Relatorios animais={animais} />}
+            {aba === 'relatorios' && <Relatorios animais={animais} carregandoAnimais={carregando} erroAnimais={erro} />}
 
             {aba === 'config' && (
               <>

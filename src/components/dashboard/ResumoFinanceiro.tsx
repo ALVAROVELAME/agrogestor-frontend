@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 import { formatarDinheiro } from './financeiroExemplo';
 import { gestaoService, type FinanceiroResumo } from '../../services/gestao.service';
+import { periodoFinanceiro } from './periodoFinanceiro';
 
 export default function ResumoFinanceiro({ emRelatorio = false }: { emRelatorio?: boolean }) {
   const [dados, setDados] = useState<FinanceiroResumo | null>(null);
   const [erro, setErro] = useState(false);
   const carregar = useCallback(async () => {
-    const fim = new Date();
-    const inicio = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate() - 364);
-    const data = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    try { setDados(await gestaoService.resumoFinanceiro(data(inicio), data(fim))); setErro(false); }
+    const { inicio, fim } = periodoFinanceiro();
+    try { setDados(await gestaoService.resumoFinanceiro(inicio, fim)); setErro(false); }
     catch { setDados(null); setErro(true); }
   }, []);
   useEffect(() => {
